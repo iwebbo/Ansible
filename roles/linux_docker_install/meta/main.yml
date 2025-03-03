@@ -1,0 +1,15 @@
+---
+galaxy_info:
+  author: "A&ECoding"
+  description: "Rôle Ansible for Linux installation with Arch"
+  license: "MIT"
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Debian
+      versions:
+        - all
+  galaxy_tags:
+    - docker
+    - linux
+    - apt
+dependencies: []

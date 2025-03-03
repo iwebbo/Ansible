@@ -1,0 +1,16 @@
+---
+- name: Déplacer Ollama vers {{ ollama_target_path }}
+  ansible.windows.win_shell: |
+    Move-Item -Path "{{ ollama_path.stdout }}" -Destination "{{ ollama_target_path }}" -Force
+  register: move_result
+  changed_when: "'moved' in move_result.stdout"
+
+- name: Vérifier le déplacement
+  ansible.windows.win_shell: "if (Test-Path '{{ ollama_target_path }}') { Write-Output 'moved' }"
+  register: move_check
+  changed_when: false
+
+- name: Arrêter le playbook si le déplacement a échoué
+  fail:
+    msg: "Le déplacement d'Ollama a échoué."
+  when: move_check.stdout != "moved"

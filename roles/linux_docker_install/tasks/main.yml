@@ -1,0 +1,14 @@
+---
+# tasks file for linux_docker_install
+- name: Check system arch
+  include_tasks: check_architecture.yml
+
+- name: Check docker status present
+  ansible.builtin.command: which docker
+  register: docker_check
+  changed_when: false
+  ignore_errors: true
+
+- name: Install docker if not present
+  include_tasks: install_docker.yml
+  when: docker_check.rc != 0

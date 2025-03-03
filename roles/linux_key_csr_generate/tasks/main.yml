@@ -1,0 +1,26 @@
+# tasks file for csr_generate
+---
+- name: Create folder for private key
+  file:
+    path: "{{ csr_key_dir }}"
+    state: directory
+    mode: '0700'
+
+- name: Create folder for CSR
+  file:
+    path: "{{ csr_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Generate private key
+  command: openssl genrsa -out {{ server_key_file }} 2048
+  args:
+    creates: "{{ server_key_file }}"
+
+- name: Generate  CSR & Subject Alternative Name (SAN)
+  command: >
+    openssl req -new -key {{ server_key_file }} -out {{ server_csr_file }}
+    -subj "/C={{ csr_country }}/ST={{ csr_state }}/L={{ csr_locality }}/O={{ csr_organization }}/OU={{ csr_organizational_unit }}/CN={{ server_name }}"
+    -addext "subjectAltName = DNS:{{ server_name }}"
+  args:
+    creates: "{{ server_csr_file }}"

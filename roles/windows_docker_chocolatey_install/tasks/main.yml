@@ -1,0 +1,14 @@
+# tasks file for docker_role
+- name: Docker via Chocolatey
+  hosts: windows
+  tasks:
+    - name: Installation of Docker from Chocolatey
+      ansible.windows.win_chocolatey:
+        name: docker-desktop
+        state: present
+
+    - name: Start Docker service
+      ansible.windows.win_service:
+        name: com.docker.service
+        start_mode: auto
+        state: started

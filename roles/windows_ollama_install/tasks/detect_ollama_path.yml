@@ -1,0 +1,7 @@
+---
+- name: Trouver le chemin d'installation d'Ollama
+  ansible.windows.win_shell: |
+    $paths = @("C:\Program Files\Ollama", "C:\Program Files (x86)\Ollama")
+    foreach ($path in $paths) { if (Test-Path $path) { Write-Output $path; break } }
+  register: ollama_path
+  changed_when: false

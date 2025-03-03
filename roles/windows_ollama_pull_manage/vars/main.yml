@@ -1,0 +1,6 @@
+---
+# vars file for windows_ollama_pull_manage
+ollama_models:
+  - "deepseek-r1:7b"
+  # - "gemma:2b"
+  # - "codellama:7b"
