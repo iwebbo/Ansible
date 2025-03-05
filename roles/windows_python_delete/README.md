@@ -23,9 +23,12 @@ Example Playbook
 
 Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
 
-    - hosts: servers
+    - name: Installer Python on Windows 
+      hosts: Windows
       roles:
-         - { role: username.rolename, x: 42 }
+        - windows_python_delete
+
+        playbook/deploy_package_windows.yml -e "target_version=3.10"
 
 License
 -------
