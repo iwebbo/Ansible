@@ -23,12 +23,7 @@ Example Playbook
 
 Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
 
-       - name: Installer Python on Windows 
-      hosts: Windows
-      roles:
-        - windows_python_install
-
-     playbook/deploy_package_windows.yml -e "python_version=3.10" 
+        playbook/deploy_package_windows.yml -e "python_version=3.10" 
 
 License
 -------
