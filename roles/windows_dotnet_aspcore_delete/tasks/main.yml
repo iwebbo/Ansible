@@ -1,0 +1,72 @@
+---
+# tasks file for windows_dotnet_aspcore_delete
+- name: Vérifier les runtimes .NET installés
+  win_command: dotnet --list-runtimes
+  register: dotnet_runtimes
+  failed_when: false
+  changed_when: false
+
+- name: Extraire les versions de runtime installées
+  set_fact:
+    installed_runtimes: "{{ dotnet_runtimes.stdout_lines | 
+                          select('match', 'Microsoft.NETCore.App\\s+\\d+\\.\\d+\\.\\d+') | 
+                          map('regex_replace', 'Microsoft.NETCore.App\\s+(\\d+\\.\\d+\\.\\d+).*', '\\1') | 
+                          list }}"
+
+- name: Définir le préfixe de version
+  set_fact:
+    runtime_prefix: "{{ dotnet_version }}"
+    runtime_exact: "{{ runtime_version }}"
+
+- name: Vérifier si le runtime spécifié est installé
+  set_fact:
+    runtime_installed: "{{ 
+      true if runtime_exact in installed_runtimes else 
+      false 
+    }}"
+
+- name: Afficher les informations de runtime
+  debug:
+    msg: 
+      - "Runtime .NET recherché : {{ runtime_exact }}"
+      - "Runtimes installés : {{ installed_runtimes }}"
+      - "Runtime présent : {{ runtime_installed }}"
+
+- name: Désinstaller le runtime .NET spécifique
+  when: runtime_installed
+  block:
+    - name: Récupérer le chemin d'installation de dotnet
+      win_shell: |
+        $dotnetPath = $env:ProgramFiles + "\dotnet"
+        if (Test-Path $dotnetPath) { 
+          Write-Output $dotnetPath 
+        }
+      register: dotnet_install_path
+      changed_when: false
+
+    - name: Supprimer le runtime spécifique
+      win_shell: |
+        $runtimePath = "{{ dotnet_install_path.stdout | trim }}\shared\Microsoft.NETCore.App\{{ runtime_exact }}"
+        if (Test-Path $runtimePath) {
+          Remove-Item -Path $runtimePath -Recurse -Force
+          Write-Output "Runtime {{ runtime_exact }} supprimé"
+        }
+      register: runtime_removal_result
+      changed_when: runtime_removal_result.stdout is defined
+
+    - name: Vérifier la suppression du runtime
+      win_command: dotnet --list-runtimes
+      register: dotnet_runtimes_after_removal
+      changed_when: false
+      failed_when: false
+
+    - name: Résultat de la désinstallation
+      debug:
+        msg: 
+          - "Runtime {{ runtime_exact }} supprimé"
+          - "Runtimes restants : {{ dotnet_runtimes_after_removal.stdout_lines }}"
+
+- name: Avertissement si runtime non installé
+  when: not runtime_installed
+  debug:
+    msg: "Le runtime .NET {{ runtime_exact }} n'est pas installé sur ce système."
