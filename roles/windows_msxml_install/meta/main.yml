@@ -1,0 +1,14 @@
+---
+galaxy_info:
+  author: "A&ECoding"
+  description: "Rôle Ansible to Delete MSXML on Windows"
+  license: "MIT"
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Windows
+      versions:
+        - all
+  galaxy_tags:
+    - windows
+    - -e -e "msxml_version=3.0 allow_reboot=true msxml_reinstall=false"
+dependencies: []

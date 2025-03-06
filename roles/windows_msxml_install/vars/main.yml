@@ -1,0 +1,7 @@
+---
+# vars file for windows_msxml_install
+msxml_version: "6.0"
+# Force reinstallation
+msxml_reinstall: false
+cleanup_temp_files: true
+allow_reboot: false
