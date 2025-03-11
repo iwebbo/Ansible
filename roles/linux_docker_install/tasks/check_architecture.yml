@@ -1,8 +1,0 @@
-- name: Arch of system used
-  ansible.builtin.command: uname -m
-  register: system_arch
-  changed_when: false
-
-- name: Set fact of arch used
-  ansible.builtin.set_fact:
-    detected_arch: "{{ system_arch.stdout }}"

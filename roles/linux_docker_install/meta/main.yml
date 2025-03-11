@@ -1,15 +1,16 @@
 ---
 galaxy_info:
   author: "A&ECoding"
-  description: "Rôle Ansible for Linux installation with Arch"
+  description: "Rôle Ansible for Deocker installation on Linux"
   license: "MIT"
   min_ansible_version: "2.9"
   platforms:
-    - name: Debian
+    - name: Debian, Redhat, Suse
       versions:
         - all
   galaxy_tags:
     - docker
     - linux
     - apt
+    - yum
 dependencies: []
