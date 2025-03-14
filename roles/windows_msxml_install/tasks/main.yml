@@ -79,7 +79,7 @@
         };
         "6" = @{
           "x86" = "https://download.microsoft.com/download/e/2/e/e2e92e52-210b-4774-8cd9-3a15db08b3ac/msxml6_x86.msi";
-          "x64" = "https://download.microsoft.com/download/e/2/e/e2e92e52-210b-4774-8cd9-3a15db08b3ac/msxml6_x64.msi";
+          "x64" = "https://catalog.s.download.windowsupdate.com/msdownload/update/software/crup/2009/11/msxml6-kb973686-fra-x86_d12d6858bdab855348aee2eca2535190234cddf6.exe";
           "Description" = "Microsoft XML Core Services (MSXML) 6.0";
         };
       }
@@ -154,7 +154,7 @@
       }
       finally {
         # Clean up temporary files if requested
-        if ($true -eq {{ cleanup_temp_files | default(true) | bool | lower }}) {
+        if (${{ cleanup_temp_files | default(true) | bool | lower }}) {
           if (Test-Path $installerPath) {
             Remove-Item -Path $installerPath -Force
           }
@@ -169,19 +169,6 @@
 - name: Install MSXML if not found or reinstall is requested
   win_shell: C:\Windows\Temp\install_msxml.ps1
   register: msxml_install_result
-  when: not msxml_found or msxml_reinstall | default(false) | bool
-
-- name: Parse installation result
-  set_fact:
-    install_success: "{{ msxml_install_result.stdout | from_json | json_query('success') }}"
-    reboot_required: "{{ msxml_install_result.stdout | from_json | json_query('reboot_required') | default(false) }}"
-  when: not msxml_found or msxml_reinstall | default(false) | bool
-
-- name: Display installation results
-  debug:
-    msg: >-
-      MSXML {{ msxml_version }} installation {{ install_success | ternary('completed successfully', 'failed') }}.
-      {{ reboot_required | ternary('System reboot is required to complete the installation.', '') }}
   when: not msxml_found or msxml_reinstall | default(false) | bool
 
 - name: Set reboot flag if required
@@ -199,7 +186,6 @@
     msg: >-
       Verification: MSXML {{ msxml_version }} is 
       {{ (msxml_verify_result.stdout | from_json).msxml_found | ternary('now installed', 'still not detected') }}
-  when: not msxml_found or msxml_reinstall | default(false) | bool
 
 # Cleanup temporary scripts
 - name: Remove temporary PowerShell scripts
