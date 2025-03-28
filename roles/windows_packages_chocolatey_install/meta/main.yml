@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  author: "A&ECoding"
+  description: "Rôle Ansible to install X Package/Version from Chocolatey"
+  license: "MIT"
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Windows
+      versions:
+        - all
+  galaxy_tags:
+    - windows
+    - chocolatey
+    - package
+    - python
+    - installation
