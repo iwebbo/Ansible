@@ -1,5 +1,6 @@
 ---
 # tasks file for windows_package_chocolatey_install
+
 - name: Check installation of Chocolatey
   win_stat:
     path: C:\ProgramData\chocolatey\choco.exe
@@ -10,63 +11,65 @@
     msg: "{{ chocolatey_missing_message }}"
   when: not choco_stat.stat.exists
 
-- name: Debug
+- name: Configure Chocolatey Artifactory source
+  win_chocolatey_source:
+    name: "{{ artifactory_source_name | default('artifactory') }}"
+    source: "{{ artifactory_url }}"
+    state: present
+    username: "{{ artifactory_username }}"
+    password: "{{ artifactory_password }}"
+    priority: 1
+  when: 
+    - artifactory_url is defined and artifactory_url | length > 0
+    - artifactory_username is defined and artifactory_username | length > 0
+    - artifactory_password is defined and artifactory_password | length > 0
+
+- name: Get installed packages information
+  win_chocolatey_facts:
+  register: chocolatey_facts
+
+- name: Debug packages
   debug:
-    var: chocolatey_facts.ansible_facts.packages
+    var: chocolatey_facts.ansible_facts.chocolatey.packages
     verbosity: 1
 
-- name: Check if already installed
+- name: Check if package is installed
+  win_shell: |
+    $packageInfo = choco list --local-only --exact {{ package_name }} -r
+    if ($packageInfo) {
+        $version = ($packageInfo -split '\|')[1]
+        Write-Output "installed|$version"
+    } else {
+        Write-Output "not_installed|"
+    }
+  register: package_check
+  changed_when: false
+  when: package_name != ""
+
+- name: Parse package info
   set_fact:
-    package_installed: >-
-      {% if chocolatey_facts.ansible_facts.packages is defined %}
-        {% set found = false %}
-        {% for pkg in chocolatey_facts.ansible_facts.packages %}
-          {% if pkg.id is defined and pkg.id|lower == package_name|lower %}
-            {% set found = true %}
-          {% elif pkg.package is defined and pkg.package|lower == package_name|lower %}
-            {% set found = true %}
-          {% elif pkg.name is defined and pkg.name|lower == package_name|lower %}
-            {% set found = true %}
-          {% endif %}
-        {% endfor %}
-        {{ found }}
-      {% else %}
-        false
-      {% endif %}
-    package_current_version: >-
-      {% if chocolatey_facts.ansible_facts.packages is defined %}
-        {% set version = '' %}
-        {% for pkg in chocolatey_facts.ansible_facts.packages %}
-          {% if (pkg.id is defined and pkg.id|lower == package_name|lower) or 
-                (pkg.package is defined and pkg.package|lower == package_name|lower) or 
-                (pkg.name is defined and pkg.name|lower == package_name|lower) %}
-            {% set version = pkg.version if pkg.version is defined else '' %}
-          {% endif %}
-        {% endfor %}
-        {{ version }}
-      {% else %}
-        ''
-      {% endif %}
+    package_status: "{{ package_check.stdout_lines[0].split('|')[0] }}"
+    package_current_version: "{{ package_check.stdout_lines[0].split('|')[1] }}"
   when: package_name != ""
 
 - name: Show package status
   debug:
-    msg: "Le package {{ package_name }} {{ 'est déjà installé en version ' + package_current_version if package_installed else 'n''est pas installé' }}"
+    msg: "Le package {{ package_name }} {{ 'est déjà installé en version ' + package_current_version if package_status == 'installed' else 'n''est pas installé' }}"
   when: package_name != ""
 
-- name: Installation/Update of {{ package_name }} from Chocolatey
+- name: Installation/Update of {{ package_name }} from Chocolatey Artifactory
   win_chocolatey:
     name: "{{ package_name }}"
     version: "{{ package_version | default(omit) }}"
     state: "{{ package_state }}"
     force: "{{ force_install }}"
-    source: "{{ chocolatey_source }}"
+    source: "{{ artifactory_source_name | default(artifactory) if artifactory_url is defined else chocolatey_source }}"
     timeout: "{{ chocolatey_timeout }}"
     package_params: "{{ install_params | default(omit) }}"
   register: choco_install
-  when: package_name != ""
+  when: package_status is not defined
 
 - name: Status of the installation
   debug:
-    msg: "{{ package_name }} version {{ package_current_version if package_installed and not choco_install.changed else (package_version if package_version else 'latest') }} {{ 'est déjà installé' if package_installed and not choco_install.changed else 'a été installé avec succès' }}"
-  when: package_name != ""
+    msg: "{{ package_name }} {{ 'est déjà installé' if package_name | lower in package_check.stdout | lower and not choco_install.changed and not choco_update.changed else 'a été installé/mis à jour avec succès' }}"
+  when: choco_install is succeeded
