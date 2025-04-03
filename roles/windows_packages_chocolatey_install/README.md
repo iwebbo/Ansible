@@ -25,6 +25,10 @@ chocolatey_source: https://chocolatey.org/api/v2/
 chocolatey_timeout: 1800
 chocolatey_missing_message: Chocolatey is not installed, Please use Chocolatey Role
   Install'.
+artifactory_source_name: artifactory
+artifactory_url: ''
+artifactory_username: ''
+artifactory_password: ''
 
 ```
 
@@ -32,10 +36,13 @@ chocolatey_missing_message: Chocolatey is not installed, Please use Chocolatey R
 
 - Check installation of Chocolatey
 - Exit if chocolatey isn't present
-- Debug
-- Check if already installed
+- Configure Chocolatey Artifactory source
+- Get installed packages information
+- Debug packages
+- Check if package is installed
+- Parse package info
 - Show package status
-- Installation/Update of {{ package_name }} from Chocolatey
+- Installation/Update of {{ package_name }} from Chocolatey Artifactory
 - Status of the installation
 
 ## Role Structure
