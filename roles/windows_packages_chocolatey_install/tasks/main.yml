@@ -52,6 +52,10 @@
     package_current_version: "{{ package_check.stdout_lines[0].split('|')[1] }}"
   when: package_name != ""
 
+- name: Debug var Package Check
+  debug: 
+    msg: "Package check var : {{ package_check.stdout }}"
+
 - name: Show package status
   debug:
     msg: "Le package {{ package_name }} {{ 'est déjà installé en version ' + package_current_version if package_status == 'installed' else 'n''est pas installé' }}"
@@ -67,7 +71,7 @@
     timeout: "{{ chocolatey_timeout }}"
     package_params: "{{ install_params | default(omit) }}"
   register: choco_install
-  when: package_status is not defined
+  when: '"not_installed|" in package_check.stdout'
 
 - name: Status of the installation
   debug:
