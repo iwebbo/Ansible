@@ -67,7 +67,7 @@
     version: "{{ package_version | default(omit) }}"
     state: "{{ package_state }}"
     force: "{{ force_install }}"
-    source: "{{ artifactory_source_name | default(artifactory) if artifactory_url is defined else chocolatey_source }}"
+    source: "{{ artifactory_source_name | default('artifactory') if (artifactory_url is defined and artifactory_url != '') else (chocolatey_source | default('https://chocolatey.org/api/v2/')) }}"
     timeout: "{{ chocolatey_timeout }}"
     package_params: "{{ install_params | default(omit) }}"
   register: choco_install
