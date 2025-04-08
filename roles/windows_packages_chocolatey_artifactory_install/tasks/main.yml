@@ -92,6 +92,7 @@
     $cmd += " --force"
     {% endif %}
     $cmd += " --no-progress"
+    $cmd += " --ignore-dependencies"
     
     # Afficher la commande
     Write-Output "EXECUTING: $cmd"
