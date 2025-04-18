@@ -147,8 +147,10 @@
     msg: |
       Installation result:
       {{ install_result.stdout if install_result is defined else 'No installation performed' }}
-  when: package_name != ""
-  verbosity: 1
+  when: 
+    - package_name != "" 
+    - install_result is defined
+    - install_result.changed
 
 - name: Status of the installation
   debug:
