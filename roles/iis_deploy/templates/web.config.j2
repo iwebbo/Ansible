@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <system.webServer>
+    <handlers accessPolicy="Read, Script" />
+    <directoryBrowse enabled="false" />
+    <defaultDocument>
+      <files>
+        <clear />
+        <add value="index.html" />
+        <add value="default.aspx" />
+      </files>
+    </defaultDocument>
+    <httpErrors errorMode="DetailedLocalOnly" />
+  </system.webServer>
+  <system.web>
+    <compilation debug="false" targetFramework="4.7.2" />
+    <customErrors mode="RemoteOnly" />
+    <httpRuntime targetFramework="{{ iis_deploy_dotnet_version }}" />
+  </system.web>
+  <appSettings>
+    <add key="Environment" value="{{ iis_deploy_app_environment }}" />
+    <add key="ApplicationName" value="{{ iis_deploy_app_name }}" />
+    <add key="Version" value="{{ iis_deploy_actual_version }}" />
+  </appSettings>
+</configuration>

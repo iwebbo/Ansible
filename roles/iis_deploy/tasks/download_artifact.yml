@@ -1,0 +1,54 @@
+---
+- name: "Créer le répertoire temporaire pour le téléchargement"
+  win_file:
+    path: "{{ ansible_env.TEMP }}\\{{ iis_deploy_app_name }}"
+    state: directory
+
+- name: "Déterminer la dernière version de l'artefact si version='latest'"
+  block:
+    - name: "Récupérer la dernière version depuis Artifactory via API REST"
+      win_uri:
+        url: "{{ artifactory_url }}/api/search/latestVersion?g={{ iis_deploy_app_name }}&repos={{ artifactory_repository }}"
+        method: GET
+        headers:
+          X-JFrog-Art-Api: "{{ artifactory_api_key | default(omit) }}"
+        user: "{{ artifactory_username | default(omit) }}"
+        password: "{{ artifactory_password | default(omit) }}"
+        return_content: yes
+      register: latest_version_response
+      when: iis_deploy_version == "latest"
+
+    - name: "Définir la version réelle"
+      set_fact:
+        actual_version: "{{ latest_version_response.content | trim }}"
+      when: iis_deploy_version == "latest"
+  when: iis_deploy_version == "latest"
+
+- name: "Utiliser la version spécifiée si ce n'est pas 'latest'"
+  set_fact:
+    actual_version: "{{ iis_deploy_version }}"
+  when: iis_deploy_version != "latest"
+
+- name: "Construire le chemin Artifactory"
+  set_fact:
+    artifact_full_path: "{{ artifactory_repository }}/{{ iis_deploy_app_name }}/{{ actual_version }}/{{ iis_deploy_app_name }}-{{ actual_version }}.zip"
+
+- name: "Télécharger l'artefact depuis Artifactory"
+  win_uri:
+    url: "{{ artifactory_url }}/{{ artifact_full_path }}"
+    method: GET
+    dest: "{{ ansible_env.TEMP }}\\{{ iis_deploy_app_name }}\\{{ iis_deploy_app_name }}-{{ actual_version }}.zip"
+    headers:
+      X-JFrog-Art-Api: "{{ artifactory_api_key | default(omit) }}"
+    user: "{{ artifactory_username | default(omit) }}"
+    password: "{{ artifactory_password | default(omit) }}"
+    follow_redirects: all
+  register: download_result
+
+- name: "Afficher les informations sur le téléchargement"
+  debug:
+    msg: "Artefact téléchargé: {{ iis_deploy_app_name }}-{{ actual_version }}.zip, statut: {{ download_result.status_code }}"
+
+- name: "Définir la version déployée dans les faits"
+  set_fact:
+    iis_deploy_actual_version: "{{ actual_version }}"
