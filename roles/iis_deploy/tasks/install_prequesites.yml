@@ -1,0 +1,36 @@
+---
+- name: "Vérifier que IIS est installé"
+  win_feature:
+    name: Web-Server
+    state: present
+    include_management_tools: yes
+  register: iis_install
+
+- name: "Installer les fonctionnalités IIS requises"
+  win_feature:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - Web-Default-Doc
+    - Web-Dir-Browsing
+    - Web-Http-Errors
+    - Web-Static-Content
+    - Web-Http-Logging
+    - Web-Stat-Compression
+    - Web-Filtering
+    - Web-Net-Ext45
+    - Web-Asp-Net45
+    - Web-ISAPI-Ext
+    - Web-ISAPI-Filter
+    - Web-Mgmt-Console
+  register: iis_features
+
+- name: "Redémarrer le serveur si nécessaire"
+  win_reboot:
+  when: iis_install.reboot_required or iis_features.reboot_required
+
+- name: "Vérifier que le service IIS est en cours d'exécution"
+  win_service:
+    name: W3SVC
+    state: started
+    start_mode: auto
