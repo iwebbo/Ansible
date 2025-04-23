@@ -10,6 +10,28 @@
     msg: "{{ chocolatey_missing_message }}"
   when: not choco_stat.stat.exists
 
+# Alternative à win_chocolatey_facts en utilisant PowerShell
+- name: Get Chocolatey packages with PowerShell
+  win_shell: |
+    $packages = choco list --local-only --limit-output | ForEach-Object {
+      $parts = $_ -split '\|'
+      if ($parts.Count -ge 2) {
+        @{
+          name = $parts[0]
+          version = $parts[1]
+        }
+      }
+    }
+    ConvertTo-Json -InputObject $packages -Compress
+  register: chocolatey_packages_result
+  changed_when: false
+
+- name: Parse Chocolatey packages JSON
+  set_fact:
+    chocolatey_facts:
+      ansible_facts:
+        packages: "{{ chocolatey_packages_result.stdout | from_json }}"
+
 - name: Debug
   debug:
     var: chocolatey_facts.ansible_facts.packages
@@ -21,11 +43,7 @@
       {% if chocolatey_facts.ansible_facts.packages is defined %}
         {% set found = false %}
         {% for pkg in chocolatey_facts.ansible_facts.packages %}
-          {% if pkg.id is defined and pkg.id|lower == package_name|lower %}
-            {% set found = true %}
-          {% elif pkg.package is defined and pkg.package|lower == package_name|lower %}
-            {% set found = true %}
-          {% elif pkg.name is defined and pkg.name|lower == package_name|lower %}
+          {% if pkg.name is defined and pkg.name|lower == package_name|lower %}
             {% set found = true %}
           {% endif %}
         {% endfor %}
@@ -37,9 +55,7 @@
       {% if chocolatey_facts.ansible_facts.packages is defined %}
         {% set version = '' %}
         {% for pkg in chocolatey_facts.ansible_facts.packages %}
-          {% if (pkg.id is defined and pkg.id|lower == package_name|lower) or 
-                (pkg.package is defined and pkg.package|lower == package_name|lower) or 
-                (pkg.name is defined and pkg.name|lower == package_name|lower) %}
+          {% if pkg.name is defined and pkg.name|lower == package_name|lower %}
             {% set version = pkg.version if pkg.version is defined else '' %}
           {% endif %}
         {% endfor %}
@@ -77,16 +93,46 @@
     - package_installed
     - choco_uninstall_result is failed or choco_uninstall_result.failed | default(false)
 
+# Alternative à win_chocolatey_facts pour vérifier après désinstallation
 - name: Check status package after uninstall
-  win_chocolatey_facts:
-  register: post_chocolatey_facts
+  win_shell: |
+    $packages = choco list --local-only --limit-output | ForEach-Object {
+      $parts = $_ -split '\|'
+      if ($parts.Count -ge 2) {
+        @{
+          name = $parts[0]
+          version = $parts[1]
+        }
+      }
+    }
+    ConvertTo-Json -InputObject $packages -Compress
+  register: post_chocolatey_packages_result
+  changed_when: false
+  when: 
+    - package_name != ""
+    - package_installed
+
+- name: Parse post-uninstall Chocolatey packages JSON
+  set_fact:
+    post_chocolatey_facts:
+      ansible_facts:
+        packages: "{{ post_chocolatey_packages_result.stdout | default('[]') | from_json }}"
   when: 
     - package_name != ""
     - package_installed
 
 - name: Check/confirm uninstall
   set_fact:
-    still_installed: "{{ (post_chocolatey_facts.ansible_facts.packages | default([]) | selectattr('name', 'equalto', package_name) | list | length > 0) if post_chocolatey_facts.ansible_facts.packages is defined else false }}"
+    still_installed: >-
+      {% set found = false %}
+      {% if post_chocolatey_facts.ansible_facts.packages is defined %}
+        {% for pkg in post_chocolatey_facts.ansible_facts.packages %}
+          {% if pkg.name|lower == package_name|lower %}
+            {% set found = true %}
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+      {{ found }}
   when: 
     - package_name != ""
     - package_installed
