@@ -1,7 +1,7 @@
 # vars file for csr_ca_sign
 ---
 ## Var Servername
-server_name: server.name
+server_name: reverseproxy.local
 ## Var of folder key management
 ca_dir: "/etc/ssl/myCA"
 ca_key_file: "{{ ca_dir }}/myCA.key"

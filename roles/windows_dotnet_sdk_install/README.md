@@ -1,73 +1,38 @@
-# Ansible Role: windows_dotnet_sdk_install
+Role Name
+=========
 
-Rôle Ansible to install .NET SDK on Windows
+A brief description of the role goes here.
 
-## General Information
+Requirements
+------------
 
-**Author:** A&ECoding
-**License:** MIT
-**Minimum Ansible Version:** 2.9
+Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
 
-**Supported Platforms:**
-- Windows
-  - Versions: all
+Role Variables
+--------------
 
-## Variables
+A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
 
-### main
+Dependencies
+------------
 
-```yaml
-sdk_version: '{{ sdk_version }}'
-dotnet_sdk_versions:
-  '6.0':
-    latest_release: 6.0.418
-    download_pr_id: 5f3e34ae-2449-4c76-b00c-33c4fee4423c
-    download_hash: 20f17fcb662a32492c447fd5bd83ab661f8f785e4be85b9ba57cf61a225a33f8
-  '7.0':
-    latest_release: 7.0.408
-    download_pr_id: 50a3ccdf-bf15-4455-a39a-1cdf6c0d1fcc
-    download_hash: 4d67fbb55c0159a4b86da4f974cd96c5dfde4b69dfcb6d56ccab52abb7c95304
-  '8.0':
-    latest_release: 8.0.309
-    download_pr_id: 7b05a559-89e3-405d-8828-069fcfda286e
-    download_hash: 8b90f27ea6dd948f8b87e0fbab779b01
-  '9.0':
-    latest_release: 9.0.100-preview.3.24104.13
-    download_pr_id: ad87fbd9-5b14-4bee-a94c-5005c4e9cf14
-    download_hash: d8a36d2fe490c9d5e50f81e13c9a4ffe37a41139f9cbb48dbd44b7e4b9a4aa10
+A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
 
-```
+Example Playbook
+----------------
 
-## Main Tasks
+Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
 
-- Check if .NET SDK are compatabile with var file (if not compatible, add the version on var file)
-- Check architecture of Windows
-- Check architecture from architecture_result
-- Information from var file to install .NET {{ sdk_version }} SDK
-- Build link .NET SDK
-- Install folder
-- Create temp folder
-- Download .NET SDK
-- Installer .NET SDK
-- Check installation of .NET SDK
-- Show the version has been installed
-- Clean-up installation folder
+    - hosts: servers
+      roles:
+         - { role: username.rolename, x: 42 }
 
-## Role Structure
+License
+-------
 
-```
-defaults/
-    └── main.yml
-handlers/
-    └── main.yml
-meta/
-    └── main.yml
-tasks/
-    └── main.yml
-tests/
-    ├── inventory
-    └── test.yml
-vars/
-    └── main.yml
-README.md
-```
+BSD
+
+Author Information
+------------------
+
+An optional section for the role authors to include contact information, or a website (HTML is not allowed).

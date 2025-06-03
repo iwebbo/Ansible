@@ -12,5 +12,5 @@ ssl_cert_file: "/etc/apache2/certificates/{{ server_name }}.crt"
 ssl_cert_key_file: "/etc/apache2/certificates/{{ server_name }}.key"
 ssl_cert_CA_file: "/etc/apache2/certificates/myCA.crt"
 ## proxy back-end var
-proxy_pass: "http://IP:PORT/"
-server_name: "SERVER.NAME"
+proxy_pass: "http://192.168.1.16:8123/"
+server_name: "reverseproxy.local"

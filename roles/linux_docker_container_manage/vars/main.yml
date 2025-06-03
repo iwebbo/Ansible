@@ -11,8 +11,8 @@ docker_images:
     #"docker run -it -p 1883:1883 eclipse-mosquitto:latest mosquitto -c /mosquitto-no-auth.conf"
     #"docker run -it -p 1883:1883 -v '$PWD/mosquitto/config:/mosquitto/config' eclipse-mosquitto"
 
-  # - name: "localai/localai:latest-aio-gpu-nvidia-cuda-12"
-  #   container_name: "local-ai"
-  #   ports: "8080:8080"
-  #   restart_policy: "unless-stopped"
-  #   docker_run_var: "docker run -d -p 8080:8080 --gpus all --name local-ai -ti localai/localai:latest-aio-gpu-nvidia-cuda-12"
+  - name: "m4dm4rtig4n/myelectricaldata:latest"
+    container_name: "myelectricaldata:latest"
+    ports: "5000:5000"
+    restart_policy: "unless-stopped"
+    docker_run_var: "docker run -d -it --restart=unless-stopped -v $(pwd)/myelectricaldata/data:/data -p 5000:5000 -e TZ='Europe/Paris' m4dm4rtig4n/myelectricaldata:latest"

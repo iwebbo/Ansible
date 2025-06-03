@@ -1,0 +1,44 @@
+---
+# tasks file for linux_package_manager
+- name: Detect Linux distribution
+  setup:
+    gather_subset:
+      - distribution
+
+- name: Install package on Debian/Ubuntu systems
+  apt:
+    name: "{{ package_name }}{% if package_version is defined and package_version != '' %}={{ package_version }}{% endif %}"
+    state: "{{ package_state | default('present') }}"
+    update_cache: yes
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+  register: debian_install_result
+
+- name: Install package on RedHat/CentOS systems
+  yum:
+    name: "{{ package_name }}{% if package_version is defined and package_version != '' %}-{{ package_version }}{% endif %}"
+    state: "{{ package_state | default('present') }}"
+    update_cache: yes
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int < 8
+  register: redhat_install_result
+
+- name: Install package on RHEL/CentOS 8+ systems (dnf)
+  dnf:
+    name: "{{ package_name }}{% if package_version is defined %}-{{ package_version }}{% endif %}"
+    state: "{{ package_state | default('present') }}"
+    update_cache: yes
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int >= 8
+  register: dnf_install_result
+
+- name: Verify package installation
+  package_facts:
+    manager: auto
+
+- name: Display installation result
+  debug:
+    msg: |
+      Package: {{ package_name }}
+      Version: {{ package_version | default('latest') }}
+      State: {{ package_state | default('present') }}
+      Distribution: {{ ansible_distribution }} {{ ansible_distribution_version }}
+      Status: {% if package_name in ansible_facts.packages %}Installed{% else %}Not found{% endif %}

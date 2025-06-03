@@ -1,68 +1,38 @@
-# Ansible Role: windows_packages_chocolatey_artifactory_install
+Role Name
+=========
 
-Rôle Ansible to install X Package/Version from Chocolatey/artifactory
+A brief description of the role goes here.
 
-## General Information
+Requirements
+------------
 
-**Author:** A&ECoding
-**License:** MIT
-**Minimum Ansible Version:** 2.9
+Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
 
-**Supported Platforms:**
-- Windows
-  - Versions: all
+Role Variables
+--------------
 
-## Variables
+A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
 
-### main
+Dependencies
+------------
 
-```yaml
-package_name: ''
-package_version: ''
-package_state: present
-force_install: false
-chocolatey_source: https://chocolatey.org/api/v2/
-chocolatey_timeout: 1800
-chocolatey_missing_message: Chocolatey is not installed, Please use Chocolatey Role
-  Install'.
-artifactory_source_name: artifactory
-artifactory_url: ''
-artifactory_username: ''
-artifactory_password: ''
+A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
 
-```
+Example Playbook
+----------------
 
-## Main Tasks
+Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
 
-- Check installation of Chocolatey
-- Exit if chocolatey isn't present
-- Initialize variables
-- Configure Chocolatey Artifactory source
-- Verify Artifactory source configuration
-- Check if package is installed
-- Parse package info
-- Debug package check
-- Show package status
-- Install {{ package_name }} using direct choco command
-- Verify installation status
-- Debug installation result
-- Status of the installation
+    - hosts: servers
+      roles:
+         - { role: username.rolename, x: 42 }
 
-## Role Structure
+License
+-------
 
-```
-defaults/
-    └── main.yml
-handlers/
-    └── main.yml
-meta/
-    └── main.yml
-tasks/
-    └── main.yml
-tests/
-    ├── inventory
-    └── test.yml
-vars/
-    └── main.yml
-README.md
-```
+BSD
+
+Author Information
+------------------
+
+An optional section for the role authors to include contact information, or a website (HTML is not allowed).

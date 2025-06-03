@@ -1,5 +1,6 @@
 ---
 # vars file for windows_package_chocolatey_install
+# Name of package need to be installed
 package_name: ""
 
 # Version (optionnel)

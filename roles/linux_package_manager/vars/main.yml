@@ -1,0 +1,32 @@
+---
+# vars file for linux_package_manager
+# Default values for package management
+package_name: ""
+package_version: ""
+package_state: "present"  # present, absent, latest
+
+# Distribution specific settings
+apt_update_cache: yes
+apt_cache_valid_time: 3600
+yum_update_cache: yes
+
+# Package manager commands by distribution
+package_managers:
+  Debian:
+    command: "apt"
+    version_separator: "="
+  Ubuntu:
+    command: "apt"
+    version_separator: "="
+  RedHat:
+    command: "yum"
+    version_separator: "-"
+  CentOS:
+    command: "yum"
+    version_separator: "-"
+  Rocky:
+    command: "dnf"
+    version_separator: "-"
+  AlmaLinux:
+    command: "dnf"
+    version_separator: "-"

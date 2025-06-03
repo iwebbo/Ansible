@@ -1,0 +1,41 @@
+---
+# Installation pour Debian/Ubuntu selon la documentation officielle
+# https://www.jenkins.io/doc/book/installing/linux/#debianubuntu
+- name: Installer les prérequis
+  become: true
+  ansible.builtin.apt:
+    name:
+      - curl
+      - gnupg
+      - ca-certificates
+    state: present
+    update_cache: yes
+
+- name: Créer le répertoire pour les clés
+  ansible.builtin.file:
+    path: /usr/share/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Ajouter la clé GPG de Jenkins
+  ansible.builtin.shell: |
+    curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee \
+      /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+  args:
+    creates: /usr/share/keyrings/jenkins-keyring.asc
+
+- name: Ajouter le repository Jenkins
+  ansible.builtin.shell: |
+    echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
+      https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+      /etc/apt/sources.list.d/jenkins.list > /dev/null
+  args:
+    creates: /etc/apt/sources.list.d/jenkins.list
+
+- name: Mettre à jour les paquets et installer Jenkins
+  become: true
+  apt:
+    name: jenkins
+    state: present
+    update_cache: yes
+  notify: restart jenkins

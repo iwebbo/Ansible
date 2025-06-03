@@ -1,6 +1,6 @@
 ---
 # vars file for csr_generate
-server_name: "server.name"
+server_name: "reverseproxy.local"
 csr_dir: "/etc/ssl/certs"
 csr_key_dir: "/etc/ssl/private"
 server_key_file: "{{ csr_key_dir }}/{{ server_name }}.key"
