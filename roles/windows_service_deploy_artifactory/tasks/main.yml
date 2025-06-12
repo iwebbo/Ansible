@@ -1,0 +1,161 @@
+---
+# tasks file for windows_service_deploy_artifactory
+- name: Créer le répertoire de téléchargement temporaire
+  win_file:
+    path: "{{ deploy_temp_dir | default('C:\\temp\\deploy') }}"
+    state: directory
+
+- name: Télécharger le package du service depuis Artifactory
+  win_get_url:
+    url: "{{ artifactory_package_url }}"
+    dest: "{{ deploy_temp_dir | default('C:\\temp\\deploy') }}\\{{ package_filename }}"
+    username: "{{ artifactory_username | default('') }}"
+    password: "{{ artifactory_password | default('') }}"
+    force: "{{ force_download | default(true) }}"
+    timeout: "{{ download_timeout | default(300) }}"
+  register: download_result
+
+- name: Vérifier que le téléchargement a réussi
+  win_stat:
+    path: "{{ deploy_temp_dir | default('C:\\temp\\deploy') }}\\{{ package_filename }}"
+  register: package_file_stat
+
+- name: Échec si le package n'existe pas
+  fail:
+    msg: "Le package {{ package_filename }} n'a pas été téléchargé correctement"
+  when: not package_file_stat.stat.exists
+
+- name: Vérifier si le service existe déjà
+  win_service_info:
+    name: "{{ service_name }}"
+  register: service_exists
+
+- name: Arrêter le service existant avant le déploiement
+  win_service:
+    name: "{{ service_name }}"
+    state: stopped
+  when: service_exists.exists and service_exists.services[0].state == 'running'
+
+- name: Créer le répertoire de destination s'il n'existe pas
+  win_file:
+    path: "{{ service_install_path }}"
+    state: directory
+
+- name: Sauvegarder la version précédente (optionnel)
+  win_shell: |
+    if (Test-Path "{{ service_install_path }}") {
+      $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+      $backupPath = "{{ backup_path | default('C:\\backup') }}\\{{ service_name }}_$timestamp"
+      New-Item -ItemType Directory -Path "{{ backup_path | default('C:\\backup') }}" -Force
+      robocopy "{{ service_install_path }}" "$backupPath" /E /R:3 /W:10
+      Write-Output "Backup created at: $backupPath"
+    }
+  register: backup_result
+  when: create_backup | default(true) and service_exists.exists
+
+- name: Extraire le package (ZIP)
+  win_unzip:
+    src: "{{ deploy_temp_dir | default('C:\\temp\\deploy') }}\\{{ package_filename }}"
+    dest: "{{ service_install_path }}"
+    delete_archive: "{{ delete_package_after_extract | default(false) }}"
+  when: package_filename | regex_search('\\.zip$', ignorecase=true)
+
+- name: Installer le package (MSI)
+  win_package:
+    path: "{{ deploy_temp_dir | default('C:\\temp\\deploy') }}\\{{ package_filename }}"
+    state: present
+    arguments: "{{ msi_arguments | default('/quiet INSTALLDIR=\"' + service_install_path + '\"') }}"
+  when: package_filename | regex_search('\\.msi$', ignorecase=true)
+
+- name: Installer le package (EXE)
+  win_shell: |
+    Start-Process -FilePath "{{ deploy_temp_dir | default('C:\\temp\\deploy') }}\\{{ package_filename }}" -ArgumentList "{{ exe_arguments | default('/S /D=' + service_install_path) }}" -Wait
+  when: package_filename | regex_search('\\.exe$', ignorecase=true)
+
+- name: Copier les fichiers de configuration personnalisés
+  win_copy:
+    src: "{{ item.src }}"
+    dest: "{{ service_install_path }}\\{{ item.dest }}"
+    backup: yes
+  loop: "{{ config_files | default([]) }}"
+  when: config_files is defined
+
+- name: Appliquer les transformations de configuration
+  win_shell: |
+    $configPath = "{{ service_install_path }}\\{{ item.file }}"
+    if (Test-Path $configPath) {
+      (Get-Content $configPath) -replace "{{ item.search }}", "{{ item.replace }}" | Set-Content $configPath
+    }
+  loop: "{{ config_transformations | default([]) }}"
+  when: config_transformations is defined
+
+- name: Supprimer le service existant s'il faut le recréer
+  win_service:
+    name: "{{ service_name }}"
+    state: absent
+  when: service_exists.exists and recreate_service | default(false)
+
+- name: Créer le service Windows
+  win_service:
+    name: "{{ service_name }}"
+    path: "{{ service_install_path }}\\{{ service_executable }}"
+    display_name: "{{ service_display_name | default(service_name) }}"
+    description: "{{ service_description | default('Service déployé via Ansible') }}"
+    start_mode: "{{ service_start_mode | default('auto') }}"
+    username: "{{ service_username | default('') }}"
+    password: "{{ service_password | default('') }}"
+    state: present
+  when: not service_exists.exists or recreate_service | default(false)
+
+- name: Configurer les paramètres avancés du service
+  win_shell: |
+    sc config "{{ service_name }}" depend= "{{ service_dependencies | join('/') }}"
+  when: service_dependencies is defined and service_dependencies | length > 0
+
+- name: Configurer l'action en cas d'échec du service
+  win_shell: |
+    sc failure "{{ service_name }}" reset= {{ failure_reset_period | default(86400) }} actions= {{ failure_actions | default('restart/60000/restart/60000/restart/60000') }}
+  when: configure_failure_actions | default(true)
+
+- name: Définir les permissions sur le répertoire du service
+  win_acl:
+    path: "{{ service_install_path }}"
+    user: "{{ item.user }}"
+    rights: "{{ item.rights }}"
+    type: "{{ item.type | default('allow') }}"
+    state: present
+  loop: "{{ directory_permissions | default([]) }}"
+  when: directory_permissions is defined
+
+- name: Démarrer le service
+  win_service:
+    name: "{{ service_name }}"
+    state: started
+  when: start_service_after_deploy | default(true)
+
+- name: Attendre que le service soit complètement démarré
+  win_wait_for:
+    timeout: "{{ service_startup_timeout | default(60) }}"
+  when: start_service_after_deploy | default(true)
+
+- name: Vérifier l'état du service
+  win_service_info:
+    name: "{{ service_name }}"
+  register: final_service_status
+
+- name: Nettoyer les fichiers temporaires
+  win_file:
+    path: "{{ deploy_temp_dir | default('C:\\temp\\deploy') }}\\{{ package_filename }}"
+    state: absent
+  when: cleanup_temp_files | default(true)
+
+- name: Vérifier que le service fonctionne (test de port si spécifié)
+  win_wait_for:
+    port: "{{ service_health_check_port }}"
+    host: "{{ service_health_check_host | default('localhost') }}"
+    timeout: "{{ health_check_timeout | default(30) }}"
+  when: service_health_check_port is defined
+
+- name: Afficher le résultat du déploiement
+  debug:
+    msg: "Service {{ service_name }} déployé avec succès - État: {{ final_service_status.services[0].state }}"

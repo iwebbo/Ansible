@@ -1,0 +1,21 @@
+---
+# tasks file for windows_service_stop
+- name: Arrêter le service Windows
+  win_service:
+    name: "{{ item }}"
+    state: stopped
+  loop: "{{ windows_services | default(['']) }}"
+  when: windows_services is defined and windows_services | length > 0
+
+- name: Vérifier l'état du service
+  win_service_info:
+    name: "{{ item }}"
+  loop: "{{ windows_services | default(['']) }}"
+  register: service_status
+  when: windows_services is defined and windows_services | length > 0
+
+- name: Afficher le statut des services
+  debug:
+    msg: "Service {{ item.item }} est {{ item.services[0].state }}"
+  loop: "{{ service_status.results }}"
+  when: service_status.results is defined

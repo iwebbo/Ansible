@@ -1,0 +1,7 @@
+---
+# vars file for windows_service_start 
+# Group Var exemple
+#        windows_services:
+#          - "Spooler"
+#          - "BITS"
+windows_services: []
