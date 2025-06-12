@@ -1,0 +1,37 @@
+---
+# tasks file for iis-start
+- name: Démarrer le service World Wide Web Publishing Service
+  win_service:
+    name: W3SVC
+    state: started
+    start_mode: auto
+
+- name: Démarrer le service IIS Admin Service
+  win_service:
+    name: IISADMIN
+    state: started
+    start_mode: auto
+
+- name: Démarrer le site web par défaut
+  win_iis_website:
+    name: "{{ iis_default_site_name | default('Default Web Site') }}"
+    state: started
+
+- name: Démarrer les pools d'applications
+  win_iis_webapppool:
+    name: "{{ item }}"
+    state: started
+  loop: "{{ iis_app_pools | default(['DefaultAppPool']) }}"
+
+- name: Vérifier que IIS répond
+  win_uri:
+    url: "http://localhost"
+    method: GET
+  register: iis_health_check
+  retries: 3
+  delay: 10
+
+- name: Afficher le statut d'IIS
+  debug:
+    msg: "IIS est démarré et répond correctement"
+  when: iis_health_check.status_code == 200

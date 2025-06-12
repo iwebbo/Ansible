@@ -1,0 +1,23 @@
+---
+# vars file for windows_package_chocolatey_install
+# Name of package need to be installed
+package_name: ""
+
+# Version (optionnel)
+package_version: ""
+
+# State of Package (present, absent, latest)
+package_state: present
+force_install: false
+
+# Configuration Chocolatey
+chocolatey_source: "https://chocolatey.org/api/v2/"
+chocolatey_timeout: 1800  # 30 minutes
+
+chocolatey_missing_message: "Chocolatey is not installed, Please use Chocolatey Role Install'."
+
+# Artifactory variables, must be forced from playbook
+artifactory_source_name: "artifactory"
+artifactory_url: ""
+artifactory_username: ""
+artifactory_password: ""

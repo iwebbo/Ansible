@@ -1,0 +1,13 @@
+---
+# handlers file for iis-deploy-v2
+- name: restart iis site
+  win_iis_website:
+    name: "{{ site_name }}"
+    state: restarted
+  when: site_name is defined
+
+- name: restart app pool
+  win_iis_webapppool:
+    name: "{{ app_pool_name }}"
+    state: restarted
+  when: app_pool_name is defined

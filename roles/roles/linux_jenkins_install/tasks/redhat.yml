@@ -1,0 +1,35 @@
+---
+# Installation pour RedHat/CentOS/Fedora selon la documentation officielle
+# https://www.jenkins.io/doc/book/installing/linux/#red-hat-centos
+
+- name: Ajouter le repository Jenkins
+  ansible.builtin.get_url:
+    url: https://pkg.jenkins.io/redhat-stable/jenkins.repo
+    dest: /etc/yum.repos.d/jenkins.repo
+    mode: '0644'
+
+- name: Importer la clé GPG de Jenkins
+  ansible.builtin.rpm_key:
+    key: https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+    state: present
+
+- name: Installer Jenkins
+  ansible.builtin.yum:
+    name: jenkins
+    state: present
+  notify: restart jenkins
+
+- name: Configurer le pare-feu (si firewalld est utilisé)
+  ansible.builtin.firewalld:
+    port: "{{ jenkins_http_port }}/tcp"
+    permanent: yes
+    state: enabled
+  when: ansible_service_mgr == 'systemd'
+  ignore_errors: yes
+
+- name: Recharger le pare-feu
+  ansible.builtin.service:
+    name: firewalld
+    state: reloaded
+  when: ansible_service_mgr == 'systemd'
+  ignore_errors: yes

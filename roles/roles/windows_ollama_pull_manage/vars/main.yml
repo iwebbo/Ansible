@@ -1,0 +1,5 @@
+---
+# vars file for windows_ollama_pull_manage
+ollama_models:
+  - "qwen2.5-coder:32b"
+  - "qwen2.5-coder:14b"

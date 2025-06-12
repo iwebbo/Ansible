@@ -1,0 +1,12 @@
+# vars file for csr_ca_sign
+---
+## Var Servername
+server_name: reverseproxy.local
+## Var of folder key management
+ca_dir: "/etc/ssl/myCA"
+ca_key_file: "{{ ca_dir }}/myCA.key"
+ca_cert_file: "{{ ca_dir }}/myCA.crt"
+server_cert_dir: "/etc/ssl/certs"
+server_csr_file: "{{ server_cert_dir }}/{{ server_name }}.csr"
+server_cert_file: "{{ server_cert_dir }}/{{ server_name }}.crt"
+cert_validity_days: 365

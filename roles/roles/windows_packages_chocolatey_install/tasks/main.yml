@@ -1,0 +1,79 @@
+---
+# tasks file for windows_package_chocolatey_install
+
+- name: Check installation of Chocolatey
+  win_stat:
+    path: C:\ProgramData\chocolatey\choco.exe
+  register: choco_stat
+
+- name: Exit if chocolatey isn't present
+  fail:
+    msg: "{{ chocolatey_missing_message }}"
+  when: not choco_stat.stat.exists
+
+- name: Configure Chocolatey Artifactory source
+  win_chocolatey_source:
+    name: "{{ artifactory_source_name | default('artifactory') }}"
+    source: "{{ artifactory_url }}"
+    state: present
+    username: "{{ artifactory_username }}"
+    password: "{{ artifactory_password }}"
+    priority: 1
+  when: 
+    - artifactory_url is defined and artifactory_url | length > 0
+    - artifactory_username is defined and artifactory_username | length > 0
+    - artifactory_password is defined and artifactory_password | length > 0
+
+- name: Get installed packages information
+  win_chocolatey_facts:
+  register: chocolatey_facts
+
+- name: Debug packages
+  debug:
+    var: chocolatey_facts.ansible_facts.chocolatey.packages
+    verbosity: 1
+
+- name: Check if package is installed
+  win_shell: |
+    $packageInfo = choco list --local-only --exact {{ package_name }} -r
+    if ($packageInfo) {
+        $version = ($packageInfo -split '\|')[1]
+        Write-Output "installed|$version"
+    } else {
+        Write-Output "not_installed|"
+    }
+  register: package_check
+  changed_when: false
+  when: package_name != ""
+
+- name: Parse package info
+  set_fact:
+    package_status: "{{ package_check.stdout_lines[0].split('|')[0] }}"
+    package_current_version: "{{ package_check.stdout_lines[0].split('|')[1] }}"
+  when: package_name != ""
+
+- name: Debug var Package Check
+  debug: 
+    msg: "Package check var : {{ package_check.stdout }}"
+
+- name: Show package status
+  debug:
+    msg: "Le package {{ package_name }} {{ 'est déjà installé en version ' + package_current_version if package_status == 'installed' else 'n''est pas installé' }}"
+  when: package_name != ""
+
+- name: Installation/Update of {{ package_name }} from Chocolatey Artifactory
+  win_chocolatey:
+    name: "{{ package_name }}"
+    version: "{{ package_version | default(omit) }}"
+    state: "{{ package_state }}"
+    force: "{{ force_install }}"
+    source: "{{ artifactory_source_name | default('artifactory') if (artifactory_url is defined and artifactory_url != '') else (chocolatey_source | default('https://chocolatey.org/api/v2/')) }}"
+    timeout: "{{ chocolatey_timeout }}"
+    package_params: "{{ install_params | default(omit) }}"
+  register: choco_install
+  when: '"not_installed|" in package_check.stdout'
+
+- name: Status of the installation
+  debug:
+    msg: "{{ package_name }} {{ 'est déjà installé' if package_name | lower in package_check.stdout | lower and not choco_install.changed and not choco_update.changed else 'a été installé/mis à jour avec succès' }}"
+  when: choco_install is succeeded

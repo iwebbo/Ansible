@@ -1,0 +1,62 @@
+- name: Vérifier l'architecture du système
+  ansible.windows.win_shell: |
+    $arch = (Get-WmiObject Win32_OperatingSystem).OSArchitecture
+    Write-Output $arch
+  register: system_architecture
+
+- name: Définir l'URL de téléchargement de Docker Desktop en fonction de l'architecture
+  set_fact:
+    docker_download_url: >-
+      {% if '64-bit' in system_architecture.stdout %}
+        https://desktop.docker.com/win/stable/Docker%20Desktop%20Installer.exe
+      {% else %}
+        https://desktop.docker.com/win/stable/Docker%20Desktop%20Installer.exe
+      {% endif %}
+
+- name: Vérifier si Docker est déjà installé
+  ansible.windows.win_shell: |
+    $docker_version = (Get-Command docker -ErrorAction SilentlyContinue).Version
+    if ($docker_version) { Write-Output "Installed: $docker_version" }
+  register: docker_installed
+  ignore_errors: yes
+
+- name: Télécharger l'installateur Docker si non installé
+  ansible.windows.win_get_url:
+    url: "{{ docker_download_url }}"
+    dest: "C:\\DockerDesktopInstaller.exe"
+  when: "'Installed:' not in docker_installed.stdout"
+
+- name: Installer Docker en mode silencieux si non installé
+  ansible.windows.win_shell: |
+    Start-Process 'C:\\DockerDesktopInstaller.exe' -ArgumentList 'install', '--quiet', '--data-root', 'G:\docker' -NoNewWindow -Wait
+  when: "'Installed:' not in docker_installed.stdout"
+
+- name: Supprimer l'installateur Docker après installation
+  ansible.windows.win_file:
+    path: "C:\\DockerDesktopInstaller.exe"
+    state: absent
+  when: "'Installed:' not in docker_installed.stdout"
+
+- name: Configurer le service Docker pour démarrer automatiquement
+  ansible.windows.win_service:
+    name: com.docker.service
+    start_mode: auto
+    state: started
+  when: "'Installed:' in docker_installed.stdout"
+
+- name: Vérifier si le service Docker existe
+  ansible.windows.win_service:
+    name: com.docker.service
+  register: docker_service_status
+  ignore_errors: yes
+
+- name: Démarrer Docker si le service existe
+  ansible.windows.win_service:
+    name: com.docker.service
+    start_mode: auto
+    state: started
+  when: docker_service_status.exists
+
+- name: Display Guidline after installation
+  debug:
+    msg: "Go to your Windows Desktop, Open Docker (to start deamonD), Change Folder root for container"

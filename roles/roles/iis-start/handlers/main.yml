@@ -1,0 +1,11 @@
+---
+# roles/iis_start/handlers/main.yml
+- name: restart iis
+  win_service:
+    name: W3SVC
+    state: restarted
+
+- name: restart iis admin
+  win_service:
+    name: IISADMIN  
+    state: restarted

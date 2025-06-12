@@ -1,0 +1,56 @@
+- name: Check if Docker has been installed
+  ansible.windows.win_shell: |
+    $docker_version = (Get-Command docker -ErrorAction SilentlyContinue).Version
+    if ($docker_version) { Write-Output "Installed: $docker_version" }
+  register: docker_installed
+  ignore_errors: yes
+
+- name: Stop playbook if Docker is not present
+  fail:
+    msg: "Docker n'est pas installé. Veuillez exécuter le rôle 'install_docker' avant de relancer ce playbook."
+  when: "'Installed:' not in docker_installed.stdout"
+
+- name: Display Docker Image will be Starting
+  debug:
+    msg: "{{ docker_images }}"
+
+- name: Check if the container/images is present 
+  ansible.windows.win_shell: "docker images -q {{ item.name }}"
+  register: image_exists
+  with_items: "{{ docker_images }}"
+  ignore_errors: yes
+
+- name: Download if container/images are missing
+  ansible.windows.win_shell: "docker pull {{ item.item.name }}"
+  when: item.stdout == ""
+  with_items: "{{ image_exists.results }}"
+
+- name: Check if container is in running state
+  ansible.windows.win_shell: "docker ps | Select-string {{ item.container_name }}"
+  register: running_container
+  with_items: "{{ docker_images }}"
+
+- name: Vérifier si le conteneur LocalAI est en cours d'exécution
+  ansible.windows.win_shell: "docker ps | Select-string {{ item.container_name }}"
+  register: running_container
+  with_items: "{{ docker_images }}"
+
+- name: Check if container/images are presents maybe stopped
+  ansible.windows.win_shell: "docker ps -a | Select-string {{ item.container_name }}" 
+  register: existing_container
+  with_items: "{{ docker_images }}"
+
+- name: Debug
+  debug:
+    msg: "{{ existing_container }}"
+
+- name: Start container/image if present and stopped
+  ansible.windows.win_shell: "docker start {{ item.container_name }}"
+  when: "'item.container_name' in existing_container and 'item.container_name' not in running_container"
+  with_items: "{{ docker_images }}"
+
+- name: Start container/images with docker run
+  ansible.windows.win_shell: |
+    "{{ item.docker_run_var }}"
+  when: "'item.container_name' not in existing_container"
+  with_items: "{{ docker_images }}"

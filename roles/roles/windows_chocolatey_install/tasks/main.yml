@@ -1,0 +1,25 @@
+# tasks file for windows_chocolatey_install
+- name: Check if Chocolatey is install
+  ansible.windows.win_shell: |
+    if (Test-Path "C:\ProgramData\chocolatey\bin\choco.exe") { Write-Output "installed" } else { Write-Output "not_installed" }
+  register: choco_status
+  changed_when: false
+
+- name: Install Chocolatey if not present
+  ansible.windows.win_shell: |
+    Set-ExecutionPolicy Bypass -Scope Process -Force;
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072;
+    iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+  when: "'not_installed' in choco_status.stdout"
+  register: install_result
+
+- name: Check status
+  debug:
+    msg: >
+      {%- if 'installed' in choco_status.stdout -%}
+      Chocolatey est déjà installé.
+      {%- elif install_result.changed -%}
+      Chocolatey a été installé avec succès.
+      {%- else -%}
+      Échec de l'installation de Chocolatey.
+      {%- endif -%}
