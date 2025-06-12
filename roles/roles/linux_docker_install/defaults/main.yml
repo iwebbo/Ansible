@@ -1,6 +1,0 @@
----
-# defaults file for linux_docker_install
-supported_architectures:
-  - amd64
-  - arm64
-  - armhf

@@ -1,6 +1,0 @@
-# handlers file for linux_jenkins_install
----
-- name: restart jenkins
-  ansible.builtin.service:
-    name: jenkins
-    state: restarted
