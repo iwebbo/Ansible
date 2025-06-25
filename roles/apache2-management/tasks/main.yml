@@ -1,0 +1,100 @@
+---
+# tasks file for apache2-management
+- name: Détecter la distribution du système
+  set_fact:
+    apache_service_name: "{{ apache_service_names[ansible_distribution] | default('apache2') }}"
+    apache_test_command: "{{ apache_config_test[ansible_distribution] | default('apache2ctl configtest') }}"
+
+- name: Afficher les informations détectées
+  debug:
+    msg: 
+      - "Distribution: {{ ansible_distribution }}"
+      - "Service Apache: {{ apache_service_name }}"
+      - "Action demandée: {{ action_apache }}"
+
+- name: Vérifier que l'action Apache est valide
+  fail:
+    msg: "Action '{{ action_apache }}' non supportée. Actions autorisées: {{ apache_actions_allowed | join(', ') }}"
+  when: action_apache not in apache_actions_allowed
+
+- name: Vérifier si Apache est installé
+  package_facts:
+    manager: auto
+
+- name: Échouer si Apache n'est pas installé
+  fail:
+    msg: "Apache n'est pas installé sur ce système"
+  when: >
+    apache_service_name not in ansible_facts.packages and
+    'httpd' not in ansible_facts.packages and
+    'apache2' not in ansible_facts.packages
+
+- name: Tester la configuration Apache avant action
+  shell: "{{ apache_test_command }}"
+  register: config_test_result
+  failed_when: false
+  changed_when: false
+  when: apache_validate_config_before_action | bool
+
+- name: Afficher le résultat du test de configuration
+  debug:
+    msg: "Test de configuration: {{ 'RÉUSSI' if config_test_result.rc == 0 else 'ÉCHOUÉ' }}"
+  when: apache_validate_config_before_action | bool
+
+- name: Échouer si la configuration Apache est invalide
+  fail:
+    msg: |
+      La configuration Apache est invalide !
+      Erreur: {{ config_test_result.stderr }}
+  when: 
+    - apache_validate_config_before_action | bool
+    - config_test_result.rc != 0
+    - action_apache in ['start', 'restart', 'reload', 'graceful']
+
+- name: Vérifier le statut actuel du service Apache
+  shell: "systemctl status {{ apache_service_name }} | grep 'Active:'"
+  register: service_result
+  failed_when: false
+  changed_when: false
+  when: apache_check_status | bool
+
+- name: Afficher le statut actuel d'Apache
+  debug:
+    msg: "Statut Apache: {{ service_result.stdout | default('Non vérifié') }}"
+  when: apache_check_status | bool
+
+- name: Vérifier les ports d'écoute Apache (si actif)
+  shell: "netstat -tlnp | grep ':80\\|:443' | grep {{ apache_service_name }}"
+  register: apache_ports
+  failed_when: false
+  changed_when: false
+  when: 
+    - apache_check_status | bool
+    - service_result.stdout is defined
+    - "'active (running)' in service_result.stdout"
+
+- name: Afficher les ports d'écoute
+  debug:
+    msg: "Ports Apache: {{ apache_ports.stdout_lines | default(['Aucun port détecté']) }}"
+  when: apache_ports is defined
+
+- name: Déclencher l'action Apache si conditions remplies
+  debug:
+    msg: "Déclenchement de l'action '{{ action_apache }}' pour Apache"
+  when: >
+    (service_result.stdout is not defined) or
+    (action_apache == 'start' and 'inactive' in service_result.stdout) or
+    (action_apache == 'stop' and 'active' in service_result.stdout) or
+    (action_apache in ['restart', 'reload', 'graceful'])
+  notify: execute apache action
+  changed_when: true
+
+- name: Aucune action nécessaire
+  debug:
+    msg: "Aucune action nécessaire - Apache est déjà dans l'état souhaité"
+  when: >
+    (action_apache == 'start' and service_result.stdout is defined and 'active (running)' in service_result.stdout) or
+    (action_apache == 'stop' and service_result.stdout is defined and 'inactive' in service_result.stdout)
+
+- name: Forcer l'exécution des handlers
+  meta: flush_handlers
