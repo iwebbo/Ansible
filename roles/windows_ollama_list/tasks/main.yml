@@ -1,0 +1,86 @@
+---
+# tasks file for windows_ollama_list
+- name: Vérifier si Ollama est installé sur Windows
+  win_shell: |
+    try {
+        $result = & {{ ollama_executable }} --version
+        Write-Host "Ollama trouvé: $result"
+        exit 0
+    } catch {
+        Write-Host "Erreur: Ollama non trouvé ou non accessible"
+        exit 1
+    }
+  register: ollama_check
+  failed_when: ollama_check.rc != 0
+  changed_when: false
+
+- name: Afficher la version d'Ollama détectée
+  debug:
+    msg: "{{ ollama_check.stdout_lines }}"
+  when: ollama_display_output | bool
+
+- name: Lister les modèles Ollama présents
+  win_shell: |
+    try {
+        Write-Host "=== LISTE DES MODELES OLLAMA ==="
+        $models = & {{ ollama_executable }} list
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host $models
+            $modelCount = ($models -split "`n" | Where-Object { $_ -match "^\w" -and $_ -notmatch "^NAME" }).Count
+            Write-Host ""
+            Write-Host "=== RESUME ==="
+            Write-Host "Nombre total de modèles: $modelCount"
+        } else {
+            Write-Host "Erreur lors de la récupération des modèles"
+            exit 1
+        }
+    } catch {
+        Write-Host "Erreur lors de l'exécution de 'ollama list': $_"
+        exit 1
+    }
+  register: ollama_models_result
+  failed_when: ollama_models_result.rc != 0
+  changed_when: false
+  timeout: "{{ ollama_timeout }}"
+
+- name: Afficher la liste des modèles Ollama
+  debug:
+    msg: "{{ ollama_models_result.stdout_lines }}"
+  when: ollama_display_output | bool
+
+- name: Sauvegarder la liste dans un fichier (optionnel)
+  win_copy:
+    content: |
+      === LISTE DES MODELES OLLAMA ===
+      Serveur: {{ inventory_hostname }}
+      Date: {{ ansible_date_time.iso8601 }}
+      
+      {{ ollama_models_result.stdout }}
+    dest: "{{ ollama_output_file }}"
+  when: ollama_save_to_file | bool
+
+- name: Extraire et formater les informations des modèles
+  set_fact:
+    ollama_models_info: >-
+      {{
+        ollama_models_result.stdout_lines 
+        | select('match', '^[a-zA-Z0-9].*') 
+        | reject('match', '^NAME.*') 
+        | list
+      }}
+
+- name: Résumé des modèles trouvés
+  debug:
+    msg:
+      - "=== RÉSUMÉ OLLAMA ==="
+      - "Serveur: {{ inventory_hostname }}"
+      - "Nombre de modèles: {{ ollama_models_info | length }}"
+      - "Modèles détectés:"
+      - "{{ ollama_models_info }}"
+  when: ollama_display_output | bool
+
+- name: Créer un fait Ansible avec les modèles
+  set_fact:
+    ansible_ollama_models: "{{ ollama_models_info }}"
+    ansible_ollama_count: "{{ ollama_models_info | length }}"
+    ansible_ollama_server: "{{ inventory_hostname }}"

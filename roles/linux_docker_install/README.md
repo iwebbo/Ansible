@@ -1,38 +1,140 @@
-Role Name
-=========
+# Ansible Role: linux_docker_install
 
-A brief description of the role goes here.
+Rôle Ansible for Deocker installation on Linux
 
-Requirements
-------------
+## General Information
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+**Author:** A&ECoding
+**License:** MIT
+**Minimum Ansible Version:** 2.9
 
-Role Variables
---------------
+**Supported Platforms:**
+- Debian, Redhat, Suse
+  - Versions: all
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+## Default Variables
 
-Dependencies
-------------
+```yaml
+supported_architectures:
+- amd64
+- arm64
+- armhf
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+```
 
-Example Playbook
-----------------
+## Main Tasks
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+- Get all information systems from Ansible
+- Display all informations of Systems Arch/OS
+- Installation of Docker on Debian/Ubuntu
+- Installation of Docker on RedHat/CentOS/Fedora
+- Installation of Docker on SUSE
+- Start & Init service docker
+- Add user if needed for Docker
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+## Other Tasks
 
-License
--------
+### setup-debian.yml
 
-BSD
+```yaml
+- name: Installation of dependencies
+  ansible.builtin.apt:
+    name:
+    - ca-certificates
+    - curl
+    - gnupg
+    - apt-transport-https
+    state: present
+    update_cache: true
+- name: Installation of Docker via script officiel
+  ansible.builtin.shell: 'curl -fsSL https://get.docker.com -o get-docker.sh
 
-Author Information
-------------------
+    sh get-docker.sh
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+    '
+  args:
+    creates: /usr/bin/docker
+  notify: restart docker
+
+```
+
+### setup-redhat.yml
+
+```yaml
+- name: Installation of prerequisite
+  ansible.builtin.yum:
+    name:
+    - yum-utils
+    - device-mapper-persistent-data
+    - lvm2
+    state: present
+- name: Installation of Docker via script officiel
+  ansible.builtin.shell: 'curl -fsSL https://get.docker.com -o get-docker.sh
+
+    sh get-docker.sh
+
+    '
+  args:
+    creates: /usr/bin/docker
+  notify: restart docker
+
+```
+
+### setup-suse.yml
+
+```yaml
+- name: Installation of prerequisites
+  ansible.builtin.zypper:
+    name:
+    - ca-certificates
+    - curl
+    state: present
+- name: Installation of Docker via script officiel
+  ansible.builtin.shell: 'curl -fsSL https://get.docker.com -o get-docker.sh
+
+    sh get-docker.sh
+
+    '
+  args:
+    creates: /usr/bin/docker
+  notify: restart docker
+
+```
+
+## Handlers
+
+```yaml
+- name: restart docker
+  ansible.builtin.service:
+    name: docker
+    state: '{{ docker_restart_handler_state }}'
+
+```
+
+## Templates
+
+- `daemon.json.j2`
+
+## Role Structure
+
+```
+vars/
+    └── main.yml
+templates/
+    └── daemon.json.j2
+meta/
+    └── main.yml
+tests/
+    ├── inventory
+    └── test.yml
+tasks/
+    ├── main.yml
+    ├── setup-debian.yml
+    ├── setup-redhat.yml
+    └── setup-suse.yml
+handlers/
+    └── main.yml
+defaults/
+    └── main.yml
+README.md
+```

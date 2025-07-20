@@ -1,38 +1,63 @@
-Role Name
-=========
+# Ansible Role: windows_packages_chocolatey_delete
 
-A brief description of the role goes here.
+your role description
 
-Requirements
-------------
+## General Information
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+**Author:** your name
+**License:** license (GPL-2.0-or-later, MIT, etc)
+**Minimum Ansible Version:** 2.1
 
-Role Variables
---------------
+## Variables
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+### main
 
-Dependencies
-------------
+```yaml
+package_name: ''
+package_version: ''
+force_uninstall: false
+remove_dependencies: true
+remove_all_versions: false
+chocolatey_timeout: 1800
+chocolatey_missing_message: Chocolatey is not installed, Please use Chocolatey Role
+  Install.
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+```
 
-Example Playbook
-----------------
+## Main Tasks
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+- Check installation of Chocolatey
+- Exit if chocolatey isn't present
+- Get Chocolatey packages with PowerShell
+- Parse Chocolatey packages JSON
+- Debug chocolatey packages
+- Check if already installed
+- Update installation status if package is found
+- Show package status
+- Uninstall package {{ package_name }} from win_chocolatey
+- Uninstall package {{ package_name }} from win_command if win_chocolatey failed
+- Check status package after uninstall
+- Parse post-uninstall packages
+- Initialize still_installed variable
+- Check if package is still installed
+- Uninstall view
+- Clean-up if needed (ex Python,Perl,Dotnet)
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+## Role Structure
 
-License
--------
-
-BSD
-
-Author Information
-------------------
-
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+```
+vars/
+    └── main.yml
+meta/
+    └── main.yml
+tests/
+    ├── inventory
+    └── test.yml
+tasks/
+    └── main.yml
+handlers/
+    └── main.yml
+defaults/
+    └── main.yml
+README.md
+```

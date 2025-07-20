@@ -1,38 +1,78 @@
-Role Name
-=========
+# Ansible Role: windows_rust_install
 
-A brief description of the role goes here.
+Install RUST on Windows
 
-Requirements
-------------
+## General Information
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+**Author:** A&ECoding
+**License:** MIT
+**Minimum Ansible Version:** 2.1
 
-Role Variables
---------------
+**Supported Platforms:**
+- Windows
+  - Versions: all
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+## Variables
 
-Dependencies
-------------
+### main
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+```yaml
+rust_install_path: E:\Tools\build\Rust
+rust_version: latest
+rust_components:
+- rustfmt
+- clippy
+- rust-src
+- cargo
+rust_default_host_triple: ''
+rust_default_toolchain: stable
+rust_profile: default
+rust_update_path: true
+rust_temp_download_dir: '{{ ansible_env.TEMP }}\rust_installer'
+rust_install_mode: quiet
 
-Example Playbook
-----------------
+```
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+## Main Tasks
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+- Create temp folder for installation
+- Detect arch system
+- Set Architecture
+- Check if RUST is already installed
+- Set fact of Architecture
+- Download installation of Rust (rustup-init)
+- Create folder of installation Path folder variable
+- Installation of RUST with Path folder changed
+- Installation of components
+- If needed change value of Path
+- Clean-up temp folder installation
 
-License
--------
+## Handlers
 
-BSD
+```yaml
+- name: Actualiser les variables d'environnement
+  win_shell: "$process = Get-Process -Id $PID\nforeach ($session in [System.Diagnostics.Process]::GetCurrentProcess().ProcessorAffinity)\
+    \ {\n    if ($session.ProcessId -eq $process.Id) {\n        $session.RefreshEnvironment()\n\
+    \    }\n}\n"
+  listen: refresh_env
 
-Author Information
-------------------
+```
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+## Role Structure
+
+```
+vars/
+    └── main.yml
+meta/
+    └── main.yml
+tests/
+    ├── inventory
+    └── test.yml
+tasks/
+    └── main.yml
+handlers/
+    └── main.yml
+defaults/
+    └── main.yml
+README.md
+```

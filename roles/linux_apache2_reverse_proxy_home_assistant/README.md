@@ -1,38 +1,84 @@
-Role Name
-=========
+# Ansible Role: linux_apache2_reverse_proxy_home_assistant
 
-A brief description of the role goes here.
+your role description
 
-Requirements
-------------
+## General Information
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+**Author:** your name
+**License:** license (GPL-2.0-or-later, MIT, etc)
+**Minimum Ansible Version:** 2.1
 
-Role Variables
---------------
+## Variables
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+### main
 
-Dependencies
-------------
+```yaml
+apache_proxy_config: /etc/apache2/conf-available/reverseproxy.app
+apache_vhost_file: /etc/apache2/sites-available/reverse_proxy_http.conf
+apache_vhost_link: /etc/apache2/sites-enabled/reverse_proxy_http.conf
+apache_vhost_ssl_file: /etc/apache2/sites-available/reverse_proxy_https.conf
+apache_vhost_ssl_link: /etc/apache2/sites-enabled/reverse_proxy_https.conf
+ssl_cert_file: /etc/apache2/certificates/{{ server_name }}.crt
+ssl_cert_key_file: /etc/apache2/certificates/{{ server_name }}.key
+ssl_cert_CA_file: /etc/apache2/certificates/myCA.crt
+proxy_pass: http://192.168.1.16:8123/
+rewrite_home: ws://192.168.1.16:8123/$1
+server_name: reverseproxy.local
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+```
 
-Example Playbook
-----------------
+## Main Tasks
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+- Check installation of Apache2
+- Activate module proxy & SSL & Rewrite
+- Deployment of configuration file (reverseproxy.app)
+- Deployment Vhost 8080
+- Deployment Vhost 4443 (SSL)
+- Add port 8080 in apache (ports.conf) in case with needed
+- Add port 4443 in apache (ports.conf)
+- Activate with a2ensite (SSL)
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+## Handlers
 
-License
--------
+```yaml
+- name: Restart Apache
+  systemd:
+    name: apache2
+    state: restarted
+    enabled: true
+- name: Reload Apache
+  systemd:
+    name: apache2
+    state: reloaded
+    enabled: true
 
-BSD
+```
 
-Author Information
-------------------
+## Templates
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+- `vhost.conf.j2`
+- `reverseproxy.app.j2`
+- `vhost_ssl.conf.j2`
+
+## Role Structure
+
+```
+vars/
+    └── main.yml
+templates/
+    ├── reverseproxy.app.j2
+    ├── vhost.conf.j2
+    └── vhost_ssl.conf.j2
+meta/
+    └── main.yml
+tests/
+    ├── inventory
+    └── test.yml
+tasks/
+    └── main.yml
+handlers/
+    └── main.yml
+defaults/
+    └── main.yml
+README.md
+```

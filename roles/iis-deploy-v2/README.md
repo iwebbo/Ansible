@@ -1,38 +1,118 @@
-Role Name
-=========
+# Ansible Role: iis-deploy-v2
 
-A brief description of the role goes here.
+Rôle Ansible to install Apache2 on linux
 
-Requirements
-------------
+## General Information
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+**Author:** A&ECoding
+**License:** MIT
+**Minimum Ansible Version:** 2.9
 
-Role Variables
---------------
+**Supported Platforms:**
+- Windows
+  - Versions: all
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+## Variables
 
-Dependencies
-------------
+### main
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+```yaml
+artifactory_base_url: ''
+artifactory_username: ''
+artifactory_password: ''
+artifactory_repository: ''
+package_filename: ''
+artifactory_package_url: '{{ artifactory_base_url }}/{{ artifactory_repository }}/{{
+  package_filename }}'
+deploy_temp_dir: C:\temp\deploy
+deploy_destination_path: C:\inetpub\wwwroot
+force_download: true
+download_timeout: 300
+delete_package_after_extract: false
+cleanup_temp_files: true
+create_backup: true
+backup_path: C:\backup
+site_name: ''
+site_port: 80
+site_ip: '*'
+site_hostname: ''
+app_pool_name: ''
+app_pool_identity: ApplicationPoolIdentity
+app_pool_username: ''
+app_pool_password: ''
+dotnet_version: v4.0
+enable_32bit: false
+msi_arguments: /quiet
+perform_health_check: true
+health_check_path: /
+health_check_retries: 5
+health_check_delay: 30
+expected_status_code:
+- 200
+- 301
+- 302
+config_files: []
+config_transformations: []
+ssl_bindings: []
+directory_permissions: []
 
-Example Playbook
-----------------
+```
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+## Main Tasks
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+- Créer le répertoire de téléchargement temporaire
+- Télécharger le package depuis Artifactory
+- Vérifier que le téléchargement a réussi
+- Échec si le package n'existe pas
+- Arrêter le pool d'applications avant le déploiement
+- Arrêter le site web avant le déploiement
+- Créer le répertoire de destination s'il n'existe pas
+- Sauvegarder la version précédente (optionnel)
+- Extraire le package (ZIP)
+- Extraire le package (MSI) - Installation
+- Copier les fichiers de configuration personnalisés
+- Appliquer les transformations de configuration
+- Créer le pool d'applications s'il n'existe pas
+- Créer ou mettre à jour le site web IIS
+- Configurer les bindings SSL si spécifiés
+- Définir les permissions sur le répertoire
+- Démarrer le pool d'applications
+- Démarrer le site web
+- Nettoyer les fichiers temporaires
+- Vérifier que l'application répond
+- Afficher le résultat du déploiement
 
-License
--------
+## Handlers
 
-BSD
+```yaml
+- name: restart iis site
+  win_iis_website:
+    name: '{{ site_name }}'
+    state: restarted
+  when: site_name is defined
+- name: restart app pool
+  win_iis_webapppool:
+    name: '{{ app_pool_name }}'
+    state: restarted
+  when: app_pool_name is defined
 
-Author Information
-------------------
+```
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+## Role Structure
+
+```
+vars/
+    └── main.yml
+meta/
+    └── main.yml
+tests/
+    ├── inventory
+    └── test.yml
+tasks/
+    └── main.yml
+handlers/
+    └── main.yml
+defaults/
+    └── main.yml
+README.md
+```

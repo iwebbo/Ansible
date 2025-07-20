@@ -1,38 +1,130 @@
-Role Name
-=========
+# Ansible Role: windows_ollama_install
 
-A brief description of the role goes here.
+Rôle Ansible pour installer, déplacer et configurer Ollama sous Windows
 
-Requirements
-------------
+## General Information
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+**Author:** A&ECoding
+**License:** MIT
+**Minimum Ansible Version:** 2.9
 
-Role Variables
---------------
+**Supported Platforms:**
+- Windows
+  - Versions: all
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+## Variables
 
-Dependencies
-------------
+### main
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+```yaml
+ollama_target_path: G:\LLM\Ollama
 
-Example Playbook
-----------------
+```
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+## Main Tasks
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+- Télécharger et installer Ollama en mode silencieux
+- Détecter le chemin d’installation d’Ollama
 
-License
--------
+## Other Tasks
 
-BSD
+### update_path.yml
 
-Author Information
-------------------
+```yaml
+- name: Ajouter Ollama au PATH
+  ansible.windows.win_shell: "$path = [System.Environment]::GetEnvironmentVariable(\"\
+    Path\", [System.EnvironmentVariableTarget]::Machine)\nif (-not $path.Contains(\"\
+    {{ ollama_target_path }}\")) {\n    [System.Environment]::SetEnvironmentVariable(\"\
+    Path\", $path + \";{{ ollama_target_path }}\", [System.EnvironmentVariableTarget]::Machine)\n\
+    }\n"
+  register: path_update
+  changed_when: '''updated'' in path_update.stdout'
+- name: "V\xE9rifier si le PATH contient le nouveau chemin"
+  ansible.windows.win_shell: 'if ($env:Path -match "{{ ollama_target_path }}") { Write-Output
+    "updated" }
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+    '
+  register: path_check
+  changed_when: false
+- name: "Arr\xEAter le playbook si le PATH n\u2019a pas \xE9t\xE9 mis \xE0 jour"
+  fail:
+    msg: "La mise \xE0 jour du PATH a \xE9chou\xE9."
+  when: path_check.stdout != "updated"
+
+```
+
+### download_install.yml
+
+```yaml
+- name: "T\xE9l\xE9charger Ollama depuis le site officiel"
+  ansible.windows.win_get_url:
+    url: https://ollama.com/download/OllamaSetup.exe
+    dest: C:\Temp\OllamaInstaller.exe
+- name: Installer Ollama en mode silencieux
+  ansible.windows.win_shell: C:\Temp\OllamaInstaller.exe /DIR={{ ollama_target_path
+    }}
+  register: ollama_install
+  changed_when: '''installation'' in ollama_install.stdout'
+
+```
+
+### move_yollama.yml
+
+```yaml
+- name: "D\xE9placer Ollama vers {{ ollama_target_path }}"
+  ansible.windows.win_shell: 'Move-Item -Path "{{ ollama_path.stdout }}" -Destination
+    "{{ ollama_target_path }}" -Force
+
+    '
+  register: move_result
+  changed_when: '''moved'' in move_result.stdout'
+- name: "V\xE9rifier le d\xE9placement"
+  ansible.windows.win_shell: if (Test-Path '{{ ollama_target_path }}') { Write-Output
+    'moved' }
+  register: move_check
+  changed_when: false
+- name: "Arr\xEAter le playbook si le d\xE9placement a \xE9chou\xE9"
+  fail:
+    msg: "Le d\xE9placement d'Ollama a \xE9chou\xE9."
+  when: move_check.stdout != "moved"
+
+```
+
+### detect_ollama_path.yml
+
+```yaml
+- name: Trouver le chemin d'installation d'Ollama
+  ansible.windows.win_shell: '$paths = @("C:\Program Files\Ollama", "C:\Program Files
+    (x86)\Ollama")
+
+    foreach ($path in $paths) { if (Test-Path $path) { Write-Output $path; break }
+    }
+
+    '
+  register: ollama_path
+  changed_when: false
+
+```
+
+## Role Structure
+
+```
+vars/
+    └── main.yml
+meta/
+    └── main.yml
+tests/
+    ├── inventory
+    └── test.yml
+tasks/
+    ├── detect_ollama_path.yml
+    ├── download_install.yml
+    ├── main.yml
+    ├── move_yollama.yml
+    └── update_path.yml
+handlers/
+    └── main.yml
+defaults/
+    └── main.yml
+README.md
+```

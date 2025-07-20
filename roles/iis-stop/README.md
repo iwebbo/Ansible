@@ -1,38 +1,66 @@
-Role Name
-=========
+# Ansible Role: iis-stop
 
-A brief description of the role goes here.
+Rôle pour arrêter IIS sur Windows Server
 
-Requirements
-------------
+## General Information
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+**Author:** Votre nom
+**License:** MIT
+**Minimum Ansible Version:** 2.9
 
-Role Variables
---------------
+**Supported Platforms:**
+- Windows
+  - Versions: 2012R2, 2016, 2019, 2022
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+## Variables
 
-Dependencies
-------------
+### main
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+```yaml
+iis_default_site_name: Default Web Site
+iis_app_pools:
+- DefaultAppPool
 
-Example Playbook
-----------------
+```
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+## Main Tasks
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+- Arrêter les pools d'applications
+- Arrêter le site web par défaut
+- Arrêter le service World Wide Web Publishing Service
+- Arrêter le service IIS Admin Service
+- Vérifier que les services IIS sont arrêtés
+- Afficher le statut d'arrêt d'IIS
 
-License
--------
+## Handlers
 
-BSD
+```yaml
+- name: stop iis
+  win_service:
+    name: W3SVC
+    state: stopped
+- name: stop iis admin
+  win_service:
+    name: IISADMIN
+    state: stopped
 
-Author Information
-------------------
+```
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+## Role Structure
+
+```
+vars/
+    └── main.yml
+meta/
+    └── main.yml
+tests/
+    ├── inventory
+    └── test.yml
+tasks/
+    └── main.yml
+handlers/
+    └── main.yml
+defaults/
+    └── main.yml
+README.md
+```

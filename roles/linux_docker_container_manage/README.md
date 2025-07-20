@@ -1,38 +1,68 @@
-Role Name
-=========
+# Ansible Role: linux_docker_container_manage
 
-A brief description of the role goes here.
+Rôle Ansible to manage container image on linux
 
-Requirements
-------------
+## General Information
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+**Author:** A&ECoding
+**License:** MIT
+**Minimum Ansible Version:** 2.9
 
-Role Variables
---------------
+**Supported Platforms:**
+- Windows
+  - Versions: all
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+## Variables
 
-Dependencies
-------------
+### main
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+```yaml
+docker_images:
+- name: eclipse-mosquitto
+  container_name: eclipse-mosquitto
+  ports: 1883:1883
+  volumes: $PWD/mosquitto/config:/mosquitto/config
+  config: null
+  restart_policy: unless-stopped
+  docker_run_var: docker run -d -it -p 1883:1883 eclipse-mosquitto:latest mosquitto
+    -c /mosquitto-no-auth.conf
+- name: m4dm4rtig4n/myelectricaldata:latest
+  container_name: myelectricaldata:latest
+  ports: 5000:5000
+  restart_policy: unless-stopped
+  docker_run_var: docker run -d -it --restart=unless-stopped -v $(pwd)/myelectricaldata/data:/data
+    -p 5000:5000 -e TZ='Europe/Paris' m4dm4rtig4n/myelectricaldata:latest
 
-Example Playbook
-----------------
+```
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+## Main Tasks
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+- Vérifier si Docker est installé
+- Stop playbook si Docker n'est pas installé
+- Afficher les images Docker à traiter
+- Vérifier si l'image Docker est présente
+- Télécharger l'image si elle est absente
+- Vérifier si le conteneur est en cours d'exécution
+- Vérifier si le conteneur existe (arrêté ou en cours)
+- Afficher le statut des conteneurs existants
+- Démarrer le conteneur s'il est arrêté
+- Lancer le conteneur si absent
 
-License
--------
+## Role Structure
 
-BSD
-
-Author Information
-------------------
-
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+```
+vars/
+    └── main.yml
+meta/
+    └── main.yml
+tests/
+    ├── inventory
+    └── test.yml
+tasks/
+    └── main.yml
+handlers/
+    └── main.yml
+defaults/
+    └── main.yml
+README.md
+```

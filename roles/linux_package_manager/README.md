@@ -1,38 +1,89 @@
-Role Name
-=========
+# Ansible Role: linux_package_manager
 
-A brief description of the role goes here.
+Universal Linux package manager role
 
-Requirements
-------------
+## General Information
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+**Author:** DevOps Team
+**License:** MIT
+**Minimum Ansible Version:** 2.9
 
-Role Variables
---------------
+**Supported Platforms:**
+- Ubuntu
+  - Versions: 18.04, 20.04, 22.04
+- Debian
+  - Versions: 10, 11
+- EL
+  - Versions: 7, 8, 9
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+## Variables
 
-Dependencies
-------------
+### main
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+```yaml
+package_name: ''
+package_version: ''
+package_state: present
+apt_update_cache: true
+apt_cache_valid_time: 3600
+yum_update_cache: true
+package_managers:
+  Debian:
+    command: apt
+    version_separator: '='
+  Ubuntu:
+    command: apt
+    version_separator: '='
+  RedHat:
+    command: yum
+    version_separator: '-'
+  CentOS:
+    command: yum
+    version_separator: '-'
+  Rocky:
+    command: dnf
+    version_separator: '-'
+  AlmaLinux:
+    command: dnf
+    version_separator: '-'
 
-Example Playbook
-----------------
+```
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+## Main Tasks
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+- Detect Linux distribution
+- Install package on Debian/Ubuntu systems
+- Install package on RedHat/CentOS systems
+- Install package on RHEL/CentOS 8+ systems (dnf)
+- Verify package installation
+- Display installation result
 
-License
--------
+## Handlers
 
-BSD
+```yaml
+- name: restart service
+  service:
+    name: '{{ service_name }}'
+    state: restarted
+  when: service_name is defined
 
-Author Information
-------------------
+```
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+## Role Structure
+
+```
+vars/
+    └── main.yml
+meta/
+    └── main.yml
+tests/
+    ├── inventory
+    └── test.yml
+tasks/
+    └── main.yml
+handlers/
+    └── main.yml
+defaults/
+    └── main.yml
+README.md
+```

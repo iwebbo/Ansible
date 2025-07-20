@@ -1,0 +1,26 @@
+---
+- name: "Status - État des services (Windows)"
+  win_shell: |
+    cd "{{ project_path }}"
+    echo "=== Services ==="
+    docker-compose ps
+    echo ""
+    echo "=== Images ==="
+    docker images | findstr {{ project_name }}
+  when: ansible_os_family == "Windows"
+  register: status_output
+
+- name: "Status - État des services (Linux)"
+  shell: |
+    cd "{{ project_path }}"
+    echo "=== Services ==="
+    docker-compose ps
+    echo ""
+    echo "=== Images ==="
+    docker images | grep {{ project_name }}
+  when: ansible_os_family != "Windows"
+  register: status_output
+
+- name: "Status - Affichage"
+  debug:
+    var: status_output.stdout_lines

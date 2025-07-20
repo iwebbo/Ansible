@@ -1,38 +1,76 @@
-Role Name
-=========
+# Ansible Role: redis-management
 
-A brief description of the role goes here.
+Rôle Ansible pour redis management
 
-Requirements
-------------
+## General Information
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+**Author:** A&ECoding
+**License:** MIT
+**Minimum Ansible Version:** 2.9
 
-Role Variables
---------------
+**Supported Platforms:**
+- Linux
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+## Variables
 
-Dependencies
-------------
+### main
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+```yaml
+action_redis: start
+redis_service_name: redis
+redis_check_status: true
+redis_actions_allowed:
+- start
+- stop
+- restart
+- reload
 
-Example Playbook
-----------------
+```
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+## Main Tasks
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+- Vérifier que l'action Redis est valide
+- Vérifier le statut actuel du service Redis
+- Afficher le statut actuel de Redis
+- Déclencher l'action Redis si conditions remplies
+- Forcer l'exécution des handlers
 
-License
--------
+## Handlers
 
-BSD
+```yaml
+- name: execute redis action
+  service:
+    name: '{{ redis_service_name }}'
+    state: '{{ action_redis }}'
+  listen: execute redis action
+- name: verify redis status after action
+  shell: systemctl status {{ redis_service_name }} | grep "Active:"
+  register: final_status
+  failed_when: false
+  changed_when: false
+  listen: execute redis action
+- name: display final redis status
+  debug:
+    msg: 'Statut final de Redis: {{ final_status.stdout }}'
+  listen: execute redis action
 
-Author Information
-------------------
+```
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+## Role Structure
+
+```
+vars/
+    └── main.yml
+meta/
+    └── main.yml
+tests/
+    ├── inventory
+    └── test.yml
+tasks/
+    └── main.yml
+handlers/
+    └── main.yml
+defaults/
+    └── main.yml
+README.md
+```
