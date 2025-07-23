@@ -12,46 +12,37 @@ Rôle Ansible to manage a container on windows
 - Windows
   - Versions: all
 
-## Variables
-
-### main
-
-```yaml
-docker_images:
-- name: mintplexlabs/anythingllm
-  container_name: anything-llm
-  ports: 3001:3001
-  volumes: G:\docker\docker-data\anything-llm:/app/data
-  restart_policy: unless-stopped
-  docker_run_var: docker run -p 3001:3001 --name mintplexlabs/anythingllm -ti --rm
-    -v G:\docker\docker-data\anything-llm:/app/data mintplexlabs/anythingllm:latest
-- name: localai/localai:latest-aio-gpu-nvidia-cuda-12
-  container_name: local-ai
-  ports: 8080:8080
-  restart_policy: unless-stopped
-  docker_run_var: docker run -d -p 8080:8080 --gpus all --name local-ai -ti localai/localai:latest-aio-gpu-nvidia-cuda-12
-
-```
-
 ## Main Tasks
 
-- Check if Docker has been installed
-- Stop playbook if Docker is not present
-- Display Docker Image will be Starting
-- Check if the container/images is present
-- Download if container/images are missing
-- Check if container is in running state
-- Vérifier si le conteneur LocalAI est en cours d'exécution
-- Check if container/images are presents maybe stopped
-- Debug
-- Start container/image if present and stopped
-- Start container/images with docker run
+- Check Docker and Docker Compose
+- Stop playbook if Docker/Compose not present
+- Show docker commands to parse
+- Parse docker run command with simpler approach
+- Debug parsed services
+- Create docker-compose directory
+- Initialize docker-compose.yml file
+- Add each service to docker-compose.yml
+- Display generated docker-compose.yml
+- Show generated compose file
+- Check if services are already running
+- Stop existing services if running
+- Start services with docker-compose (cd to directory first)
+- Show docker-compose up results
+- Wait for services to initialize
+- Check services status
+- Display final services status
+
+## Templates
+
+- `docker-compose.yml.j2`
 
 ## Role Structure
 
 ```
 vars/
     └── main.yml
+templates/
+    └── docker-compose.yml.j2
 meta/
     └── main.yml
 tests/

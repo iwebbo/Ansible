@@ -2,14 +2,14 @@
 - name: "Build - Construction des images (Windows)"
   win_shell: |
     cd "{{ project_path }}"
-    docker-compose build {{ '--no-cache' if force_rebuild else '' }}
+    docker-compose.exe build {{ '--no-cache' if force_rebuild else '' }}
   when: ansible_os_family == "Windows"
   register: build_result
 
 - name: "Build - Construction des images (Linux)"
   shell: |
     cd "{{ project_path }}"
-    docker-compose build {{ '--no-cache' if force_rebuild else '' }}
+    docker-compose.exe build {{ '--no-cache' if force_rebuild else '' }}
   when: ansible_os_family != "Windows"
   register: build_result
 

@@ -1,17 +1,25 @@
 # vars file for docker_container_manage
-docker_images:
-  - name: "mintplexlabs/anythingllm"
-    container_name: "anything-llm"
-    ports: "3001:3001"
-    volumes: "G:\\docker\\docker-data\\anything-llm:/app/data"
-    restart_policy: "unless-stopped"
-    docker_run_var: "docker run -p 3001:3001 --name mintplexlabs/anythingllm -ti --rm -v G:\\docker\\docker-data\\anything-llm:/app/data mintplexlabs/anythingllm:latest"
+# docker_images:
+#   - name: ""
+#     container_name: ""
+#     ports: ""
+#     volumes: ""
+#     restart_policy: ""
+#     docker_run_var: ""
 
-  - name: "localai/localai:latest-aio-gpu-nvidia-cuda-12"
-    container_name: "local-ai"
-    ports: "8080:8080"
-    restart_policy: "unless-stopped"
-    docker_run_var: "docker run -d -p 8080:8080 --gpus all --name local-ai -ti localai/localai:latest-aio-gpu-nvidia-cuda-12"
+# docker_images:
+#   - name: "mintplexlabs/anythingllm"
+#     container_name: "anything-llm"
+#     ports: "3001:3001"
+#     volumes: "G:\\docker\\docker-data\\anything-llm:/app/data"
+#     restart_policy: "unless-stopped"
+#     docker_run_var: "docker run -p 3001:3001 --name mintplexlabs/anythingllm -ti --rm -v G:\\docker\\docker-data\\anything-llm:/app/data mintplexlabs/anythingllm:latest"
+
+  # - name: "localai/localai:latest-aio-gpu-nvidia-cuda-12"
+  #   container_name: "local-ai"
+  #   ports: "8080:8080"
+  #   restart_policy: "unless-stopped"
+  #   docker_run_var: "docker run -d -p 8080:8080 --gpus all --name local-ai -ti localai/localai:latest-aio-gpu-nvidia-cuda-12"
 
   # - name: "mysql:latest"
   #   container_name: "mysql-db"

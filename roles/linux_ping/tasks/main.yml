@@ -1,0 +1,25 @@
+# tasks file for linux_ping
+---
+- name: Test de connectivité Linux avec ping
+  ping:
+  register: ping_result
+
+- name: Afficher le résultat du ping Linux
+  debug:
+    msg: "Ping réussi sur {{ inventory_hostname }} - {{ ping_result.ping }}"
+
+- name: Collecter des informations système de base
+  setup:
+    gather_subset:
+      - "!all"
+      - "min"
+      - "network"
+  register: system_info
+
+- name: Afficher les informations système Linux
+  debug:
+    msg: 
+      - "Nom d'hôte: {{ ansible_hostname }}"
+      - "Système: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+      - "Architecture: {{ ansible_architecture }}"
+      - "IP principale: {{ ansible_default_ipv4.address | default('Non détectée') }}"

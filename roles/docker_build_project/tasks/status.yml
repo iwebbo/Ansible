@@ -4,23 +4,21 @@
     cd "{{ project_path }}"
     echo "=== Services ==="
     docker-compose ps
-    echo ""
-    echo "=== Images ==="
-    docker images | findstr {{ project_name }}
   when: ansible_os_family == "Windows"
-  register: status_output
+  register: status_output_windows
 
 - name: "Status - État des services (Linux)"
   shell: |
     cd "{{ project_path }}"
     echo "=== Services ==="
     docker-compose ps
-    echo ""
-    echo "=== Images ==="
-    docker images | grep {{ project_name }}
   when: ansible_os_family != "Windows"
-  register: status_output
+  register: status_output_linux
 
 - name: "Status - Affichage"
   debug:
-    var: status_output.stdout_lines
+    msg: "{{ status_output_windows.stdout | default('Statut non disponible') }}"
+
+- name: "Status - Affichage"
+  debug:
+    msg: "{{ status_output_linux.stdout | default('Statut non disponible') }}"

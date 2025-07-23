@@ -1,56 +1,202 @@
-- name: Check if Docker has been installed
+- name: Check Docker and Docker Compose
   ansible.windows.win_shell: |
-    $docker_version = (Get-Command docker -ErrorAction SilentlyContinue).Version
-    if ($docker_version) { Write-Output "Installed: $docker_version" }
-  register: docker_installed
-  ignore_errors: yes
+    docker --version
+    docker-compose --version
+  register: docker_check
 
-- name: Stop playbook if Docker is not present
+- name: Stop playbook if Docker/Compose not present
   fail:
-    msg: "Docker n'est pas installé. Veuillez exécuter le rôle 'install_docker' avant de relancer ce playbook."
-  when: "'Installed:' not in docker_installed.stdout"
+    msg: "Docker ou Docker Compose n'est pas installé."
+  when: docker_check.rc != 0
 
-- name: Display Docker Image will be Starting
+- name: Show docker commands to parse
   debug:
-    msg: "{{ docker_images }}"
-
-- name: Check if the container/images is present 
-  ansible.windows.win_shell: "docker images -q {{ item.name }}"
-  register: image_exists
+    msg: 
+      - "Container: {{ item.container_name }}"
+      - "Docker Run Command: {{ item.docker_run_var }}"
   with_items: "{{ docker_images }}"
+  when: item.container_name != "" and item.docker_run_var != ""
+
+- name: Parse docker run command with simpler approach
+  ansible.windows.win_shell: |
+    $command = "{{ item.docker_run_var }}"
+    $serviceName = "{{ item.container_name }}"
+    
+    Write-Output "Parsing: $command"
+    
+    $parts = $command -split '\s+'
+    
+    $image = ""
+    for ($i = $parts.Length - 1; $i -ge 0; $i--) {
+        if ($parts[$i] -match '^[a-zA-Z][^=\s]*:[^=\s]+$' -and $parts[$i] -notmatch '^-') {
+            $image = $parts[$i]
+            $imageIndex = $i
+            break
+        }
+    }
+    
+    Write-Output "Found image: $image"
+    
+    $ports = @()
+    for ($i = 0; $i -lt $parts.Length; $i++) {
+        if ($parts[$i] -eq '-p' -and $i + 1 -lt $parts.Length) {
+            $ports += $parts[$i + 1]
+        }
+    }
+    
+    $environment = @()
+    for ($i = 0; $i -lt $parts.Length; $i++) {
+        if ($parts[$i] -eq '-e' -and $i + 1 -lt $parts.Length) {
+            $environment += $parts[$i + 1]
+        }
+    }
+    
+    $volumes = @()
+    for ($i = 0; $i -lt $parts.Length; $i++) {
+        if ($parts[$i] -eq '-v' -and $i + 1 -lt $parts.Length) {
+            $volumes += $parts[$i + 1]
+        }
+    }
+    
+    $commandArgs = ""
+    if ($imageIndex -and $imageIndex + 1 -lt $parts.Length) {
+        $commandArgs = ($parts[($imageIndex + 1)..($parts.Length - 1)] -join ' ')
+    }
+    
+    $result = @{
+        service_name = $serviceName
+        container_name = $serviceName
+        image = $image
+        ports = $ports
+        environment = $environment
+        volumes = $volumes
+        command = $commandArgs
+        restart_policy = "unless-stopped"
+    }
+    
+    $result | ConvertTo-Json -Depth 3 -Compress
+  with_items: "{{ docker_images }}"
+  register: parsed_services
+  when: item.container_name != "" and item.docker_run_var != ""
+
+- name: Debug parsed services
+  debug:
+    msg: 
+      - "Original: {{ item.item.docker_run_var }}"
+      - "Parsed JSON: {{ item.stdout | regex_search('{.*}') }}"
+  loop: "{{ parsed_services.results }}"
+  when: parsed_services.results is defined
+
+- name: Create docker-compose directory
+  ansible.windows.win_file:
+    path: "{{ docker_compose_path | default('C:/docker-compose') }}"
+    state: directory
+
+- name: Initialize docker-compose.yml file
+  ansible.windows.win_shell: |
+    $composePath = "{{ docker_compose_path | default('C:/docker-compose') }}/docker-compose.yml"
+    "services:" | Out-File -FilePath $composePath -Encoding UTF8
+    Write-Output "Initialized docker-compose.yml at $composePath"
+
+- name: Add each service to docker-compose.yml
+  ansible.windows.win_shell: |
+    $composePath = "{{ docker_compose_path | default('C:/docker-compose') }}/docker-compose.yml"
+    
+    # Extract JSON from the output
+    $jsonString = '{{ item.stdout }}' | Select-String -Pattern '\{.*\}' | ForEach-Object { $_.Matches[0].Value }
+    Write-Output "Processing JSON: $jsonString"
+    
+    $serviceData = $jsonString | ConvertFrom-Json
+    Write-Output "Service: $($serviceData.service_name)"
+    
+    # Build service definition
+    $serviceYaml = "  $($serviceData.service_name):"
+    $serviceYaml += "`n    image: $($serviceData.image)"
+    $serviceYaml += "`n    container_name: $($serviceData.container_name)"
+    
+    # Add ports if they exist
+    if ($serviceData.ports -and $serviceData.ports.Count -gt 0) {
+        $serviceYaml += "`n    ports:"
+        foreach ($port in $serviceData.ports) {
+            $serviceYaml += "`n      - `"$port`""
+        }
+    }
+    
+    # Add environment if it exists
+    if ($serviceData.environment -and $serviceData.environment.Count -gt 0) {
+        $serviceYaml += "`n    environment:"
+        foreach ($env in $serviceData.environment) {
+            $serviceYaml += "`n      - $env"
+        }
+    }
+    
+    # Add volumes if they exist
+    if ($serviceData.volumes -and $serviceData.volumes.Count -gt 0) {
+        $serviceYaml += "`n    volumes:"
+        foreach ($volume in $serviceData.volumes) {
+            $serviceYaml += "`n      - $volume"
+        }
+    }
+    
+    # Add command if it exists
+    if ($serviceData.command -and $serviceData.command.Trim() -ne "") {
+        $serviceYaml += "`n    command: $($serviceData.command)"
+    }
+    
+    # Add restart policy
+    $serviceYaml += "`n    restart: $($serviceData.restart_policy)"
+    $serviceYaml += "`n"
+    
+    # Append to compose file
+    $serviceYaml | Add-Content -Path $composePath -Encoding UTF8
+    
+    Write-Output "Added service: $($serviceData.service_name)"
+  loop: "{{ parsed_services.results }}"
+  register: add_service
+
+- name: Display generated docker-compose.yml
+  ansible.windows.win_shell: "type {{ docker_compose_path | default('C:/docker-compose') }}/docker-compose.yml"
+  register: final_compose
+
+- name: Show generated compose file
+  debug:
+    msg: "{{ final_compose.stdout_lines }}"
+
+- name: Check if services are already running
+  ansible.windows.win_shell: "docker-compose -f {{ docker_compose_path | default('C:/docker-compose') }}/docker-compose.yml ps -q"
+  register: running_services
   ignore_errors: yes
 
-- name: Download if container/images are missing
-  ansible.windows.win_shell: "docker pull {{ item.item.name }}"
-  when: item.stdout == ""
-  with_items: "{{ image_exists.results }}"
+- name: Stop existing services if running
+  ansible.windows.win_shell: "docker-compose -f {{ docker_compose_path | default('C:/docker-compose') }}/docker-compose.yml down"
+  when: running_services.stdout | length > 0
+  ignore_errors: yes
 
-- name: Check if container is in running state
-  ansible.windows.win_shell: "docker ps | Select-string {{ item.container_name }}"
-  register: running_container
-  with_items: "{{ docker_images }}"
-
-- name: Vérifier si le conteneur LocalAI est en cours d'exécution
-  ansible.windows.win_shell: "docker ps | Select-string {{ item.container_name }}"
-  register: running_container
-  with_items: "{{ docker_images }}"
-
-- name: Check if container/images are presents maybe stopped
-  ansible.windows.win_shell: "docker ps -a | Select-string {{ item.container_name }}" 
-  register: existing_container
-  with_items: "{{ docker_images }}"
-
-- name: Debug
-  debug:
-    msg: "{{ existing_container }}"
-
-- name: Start container/image if present and stopped
-  ansible.windows.win_shell: "docker start {{ item.container_name }}"
-  when: "'item.container_name' in existing_container and 'item.container_name' not in running_container"
-  with_items: "{{ docker_images }}"
-
-- name: Start container/images with docker run
+- name: Start services with docker-compose (cd to directory first)
   ansible.windows.win_shell: |
-    "{{ item.docker_run_var }}"
-  when: "'item.container_name' not in existing_container"
-  with_items: "{{ docker_images }}"
+    cd "{{ docker_compose_path }}"
+    pwd
+    ls
+    docker-compose.exe up -d
+  register: compose_up_result
+  ignore_errors: yes
+  failed_when: false
+
+- name: Show docker-compose up results
+  debug:
+    msg: 
+      - "Return Code: {{ compose_up_result.rc }}"
+      - "Output: {{ compose_up_result.stdout_lines }}"
+      - "Error: {{ compose_up_result.stderr_lines if compose_up_result.stderr_lines else 'None' }}"
+
+- name: Wait for services to initialize
+  pause:
+    seconds: 30
+
+- name: Check services status
+  ansible.windows.win_shell: "docker-compose -f {{ docker_compose_path | default('C:/docker-compose') }}/docker-compose.yml ps"
+  register: services_status
+
+- name: Display final services status
+  debug:
+    msg: "{{ services_status.stdout_lines }}"

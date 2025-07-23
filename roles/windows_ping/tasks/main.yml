@@ -1,0 +1,25 @@
+# tasks file for windows_ping
+---
+- name: Test de connectivité Windows avec win_ping
+  win_ping:
+  register: win_ping_result
+
+- name: Afficher le résultat du ping Windows
+  debug:
+    msg: "Ping Windows réussi sur {{ inventory_hostname }} - {{ win_ping_result.ping }}"
+
+- name: Collecter des informations système Windows
+  win_shell: |
+    $info = @{
+      'Nom' = $env:COMPUTERNAME
+      'Système' = (Get-WmiObject -Class Win32_OperatingSystem).Caption
+      'Version' = (Get-WmiObject -Class Win32_OperatingSystem).Version
+      'Architecture' = (Get-WmiObject -Class Win32_OperatingSystem).OSArchitecture
+      'IP' = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.IPAddress -notlike "127.*" -and $_.IPAddress -notlike "169.*"} | Select-Object -First 1).IPAddress
+    }
+    $info | ConvertTo-Json
+  register: win_system_info
+
+- name: Afficher les informations système Windows
+  debug:
+    var: win_system_info.stdout | from_json

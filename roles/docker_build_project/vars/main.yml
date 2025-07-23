@@ -1,6 +1,6 @@
 ---
 # vars file for docker_build_project
-docker_action: "status"  # build, start, stop, down, restart, status
+docker_action: ""  # build, start, stop, down, restart, status
 project_path: ""         # Chemin obligatoire vers le projet
 project_name: "server-monitoring"
 force_rebuild: false
