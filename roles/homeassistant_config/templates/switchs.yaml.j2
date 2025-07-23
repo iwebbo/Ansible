@@ -1,0 +1,32 @@
+{% raw %}
+switch:
+  - platform: template
+    switches:
+      my_computer:
+        friendly_name: "PC Gamer ON/OFF"
+        value_template: "{{ is_state('binary_sensor.gamertour_power_gamertour_power_status', 'on') }}"
+        turn_on:
+          action: switch.turn_on
+          target:
+            entity_id: script.my_computer_wake
+        turn_off:
+          action: switch.turn_off
+          target:
+            entity_id: script.my_computer_shutdown
+        icon_template: phu:intel-cpu
+        
+  - platform: template
+    switches:
+      tv_samsung_salon:
+        friendly_name: "tv_samsung_salon"
+        value_template: "{{ is_state('remote.samsung_q60_series_65', 'on') }}"
+        turn_on:
+          action: switch.turn_on
+          target:
+            entity_id: script.samsung_tv_salon_on
+        turn_off:
+          action: switch.turn_off
+          target:
+            entity_id: script.samsung_tv_salon_off
+        icon_template: phu:samsung
+{% endraw %}

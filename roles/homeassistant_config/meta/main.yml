@@ -1,0 +1,37 @@
+---
+galaxy_info:
+  author: A&E Coding
+  description: Rôle pour déployer et gérer les configurations Home Assistant OS via templates YAML
+  company: A&E Coding
+  license: MIT
+  min_ansible_version: '2.9'
+  platforms:
+    - name: Generic
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - '10'
+        - '11'
+        - '12'
+    - name: Ubuntu
+      versions:
+        - '20.04'
+        - '22.04'
+        - '24.04'
+    - name: Alpine
+      versions:
+        - all
+  galaxy_tags:
+    - homeassistant
+    - hass
+    - smarthome
+    - iot
+    - automation
+    - yaml
+    - configuration
+    - deployment
+    - template
+    - backup
+
+dependencies: []

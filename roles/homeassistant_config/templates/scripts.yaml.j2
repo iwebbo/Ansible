@@ -1,0 +1,128 @@
+my_computer_logoff:
+      alias: "PC Gamer - Logoff"
+      sequence:
+        - service: mqtt.publish
+          data:
+              topic: "iotlink/workgroup/gamertour/commands/logoff"
+              payload: ""
+
+my_computer_shutdown:
+    alias: "PC Gamer - Shutdown"
+    sequence:
+      - service: mqtt.publish
+        data:
+          topic: "iotlink/workgroup/gamertour/commands/shutdown"
+          payload: ""
+
+my_computer_suspend:
+    alias: "PC Gamer - Suspend"
+    sequence:
+      - service: mqtt.publish
+        data:
+          topic: "iotlink/workgroup/gamertour/commands/suspend"
+          payload: ""
+
+my_computer_hibernate:
+    alias: "PC Gamer - Hibernate"
+    sequence:
+      - service: mqtt.publish
+        data:
+          topic: "iotlink/workgroup/gamertour/commands/hibernate"
+          payload: ""
+
+my_computer_reboot:
+    alias: "PC Gamer - Reboot"
+    sequence:
+      - service: mqtt.publish
+        data:
+          topic: "iotlink/workgroup/gamertour/commands/reboot"
+          payload: ""
+
+my_computer_lock:
+    alias: "PC Gamer - Lock"
+    sequence:
+      - service: mqtt.publish
+        data:
+          topic: "iotlink/workgroup/gamertour/commands/lock"
+          payload: ""
+
+my_computer_vol_mute:
+    alias: "PC Gamer - Toggle Mute"
+    sequence:
+      - service: mqtt.publish
+        data:
+          topic: "iotlink/workgroup/gamertour/commands/volume/mute"
+          payload: ""
+
+my_computer_vol_max:
+    alias: "PC Gamer - Vol Max"
+    sequence:
+      - service: mqtt.publish
+        data:
+          topic: "iotlink/workgroup/gamertour/commands/volume/set"
+          payload: "100"
+
+my_computer_displays_on:
+    alias: "PC Gamer - Displays ON"
+    sequence:
+      - service: mqtt.publish
+        data:
+          topic: "iotlink/workgroup/gamertour/commands/displays/on"
+          payload: ""
+
+my_computer_displays_off:
+    alias: "PC Gamer - Displays OFF"
+    sequence:
+      - service: mqtt.publish
+        data:
+          topic: "iotlink/workgroup/gamertour/commands/displays/off"
+          payload: ""
+
+my_computer_refresh:
+    alias: "PC Gamer - Refresh"
+    sequence:
+      - service: mqtt.publish
+        data:
+          topic: "iotlink/workgroup/gamertour/refresh"
+          payload: ""
+
+my_computer_notify:
+    alias: "PC Gamer - Notify"
+    sequence:
+      - service: mqtt.publish
+        data:
+          topic: "iotlink/workgroup/gamertour/commands/notify"
+          payload: '{ "title": "Notification", "message": "Test need to be review", "launchParams": "toast://open/https://iotlink.gitlab.io" }'
+      - alias: "Notify home assistant app"
+        action: notify.notify
+        data:
+          message: "Send notification to PC Gamer MQTT"
+          
+my_computer_wake:
+    alias: "PC Gamer - Wake"
+    sequence:
+      - service: wake_on_lan.send_magic_packet
+        data:
+          mac: "2C:F0:5D:CC:53:A8"
+         
+my_computer_run_chrome:
+    alias: "PC Gamer - Run Chrome"
+    sequence:
+      - service: mqtt.publish
+        data:
+          topic: "iotlink/workgroup/gamertour/commands/run"
+          payload: '{ "command": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "args": "https://iotlink.gitlab.io", "path": "C:\\Program Files\\Google\\Chrome\\Application", "user": "", "visible": true, "fallback": true }'
+
+samsung_tv_salon_off:
+    alias: "Samsung TV Salon - Off"
+    sequence:
+        - action: media_player.turn_off
+          target:
+            entity_id: media_player.samsung_q60_series_65
+
+samsung_tv_salon_on:
+    alias: "Samsung TV Salon - On"
+    sequence:
+        - action: media_player.turn_on
+          target:
+            entity_id: media_player.samsung_q60_series_65

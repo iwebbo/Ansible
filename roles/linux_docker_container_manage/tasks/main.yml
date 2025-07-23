@@ -1,57 +1,234 @@
----
-# tasks file for linux_docker_container_manage
-- name: Vérifier si Docker est installé
-  ansible.builtin.shell: "which docker"
-  register: docker_installed
+- name: Check Docker and Docker Compose
+  shell: |
+    docker --version
+    docker-compose --version
+  register: docker_check
   ignore_errors: yes
-  changed_when: false
 
-- name: Stop playbook si Docker n'est pas installé
+- name: Stop playbook if Docker/Compose not present
   fail:
-    msg: "Docker n'est pas installé. Veuillez exécuter le rôle 'install_docker' avant de relancer ce playbook."
-  when: docker_installed.rc != 0
+    msg: "Docker ou Docker Compose n'est pas installé."
+  when: docker_check.rc != 0
 
-- name: Afficher les images Docker à traiter
+- name: Show docker commands to parse
   debug:
-    msg: "{{ docker_images }}"
-
-- name: Vérifier si l'image Docker est présente
-  ansible.builtin.shell: "docker images -q {{ item.name }}"
-  register: image_exists
+    msg: 
+      - "Container: {{ item.container_name }}"
+      - "Docker Run Command: {{ item.docker_run_var }}"
   with_items: "{{ docker_images }}"
-  ignore_errors: yes
+  when: item.container_name != "" and item.docker_run_var != ""
 
-- name: Télécharger l'image si elle est absente
-  ansible.builtin.shell: "docker pull {{ item.item.name }}"
-  when: item.stdout == ""
-  with_items: "{{ image_exists.results }}"
-
-- name: Vérifier si le conteneur est en cours d'exécution
-  ansible.builtin.shell: "docker ps | grep {{ item.container_name }}"
-  register: running_container
+- name: Parse docker run command with bash approach
+  shell: |
+    command="{{ item.docker_run_var }}"
+    service_name="{{ item.container_name }}"
+    
+    echo "Parsing: $command"
+    
+    # Convert command to array
+    eval "parts=($command)"
+    
+    # Find image (last argument that looks like image:tag and doesn't start with -)
+    image=""
+    image_index=-1
+    for ((i=${#parts[@]}-1; i>=0; i--)); do
+        if [[ "${parts[i]}" =~ ^[a-zA-Z][^=[:space:]]*:[^=[:space:]]+$ ]] && [[ ! "${parts[i]}" =~ ^- ]]; then
+            image="${parts[i]}"
+            image_index=$i
+            break
+        fi
+    done
+    
+    echo "Found image: $image"
+    
+    # Extract ports
+    ports=()
+    for ((i=0; i<${#parts[@]}; i++)); do
+        if [[ "${parts[i]}" == "-p" ]] && [[ $((i+1)) -lt ${#parts[@]} ]]; then
+            ports+=("${parts[$((i+1))]}")
+        fi
+    done
+    
+    # Extract environment variables
+    environment=()
+    for ((i=0; i<${#parts[@]}; i++)); do
+        if [[ "${parts[i]}" == "-e" ]] && [[ $((i+1)) -lt ${#parts[@]} ]]; then
+            environment+=("${parts[$((i+1))]}")
+        fi
+    done
+    
+    # Extract volumes
+    volumes=()
+    for ((i=0; i<${#parts[@]}; i++)); do
+        if [[ "${parts[i]}" == "-v" ]] && [[ $((i+1)) -lt ${#parts[@]} ]]; then
+            volumes+=("${parts[$((i+1))]}")
+        fi
+    done
+    
+    # Extract command arguments (everything after image)
+    command_args=""
+    if [[ $image_index -ge 0 ]] && [[ $((image_index+1)) -lt ${#parts[@]} ]]; then
+        command_args="${parts[@]:$((image_index+1))}"
+    fi
+    
+    # Build JSON result
+    cat <<EOF
+    {
+      "service_name": "$service_name",
+      "container_name": "$service_name",
+      "image": "$image",
+      "ports": [$(printf '"%s",' "${ports[@]}" | sed 's/,$//')],
+      "environment": [$(printf '"%s",' "${environment[@]}" | sed 's/,$//')],
+      "volumes": [$(printf '"%s",' "${volumes[@]}" | sed 's/,$//')],
+      "command": "$command_args",
+      "restart_policy": "unless-stopped"
+    }
+    EOF
   with_items: "{{ docker_images }}"
-  changed_when: false
-  failed_when: running_container.rc not in [0, 1]  # ✅ Ignore erreur si rc=1
-  ignore_errors: yes
+  register: parsed_services
+  when: item.container_name != "" and item.docker_run_var != ""
 
-- name: Vérifier si le conteneur existe (arrêté ou en cours)
-  ansible.builtin.shell: "docker ps -a | grep {{ item.container_name }}"
-  register: existing_container
-  with_items: "{{ docker_images }}"
-  changed_when: false
-  failed_when: existing_container.rc not in [0, 1]  # ✅ Ignore erreur si rc=1
-  ignore_errors: yes
-
-- name: Afficher le statut des conteneurs existants
+- name: Debug parsed services
   debug:
-    msg: "{{ existing_container }}"
+    msg: 
+      - "Original: {{ item.item.docker_run_var }}"
+      - "Parsed JSON: {{ item.stdout }}"
+  loop: "{{ parsed_services.results }}"
+  when: parsed_services.results is defined
 
-- name: Démarrer le conteneur s'il est arrêté
-  ansible.builtin.shell: "docker start {{ item.container_name }}"
-  when: "'item.container_name' in existing_container and 'item.container_name' not in running_container"
-  with_items: "{{ docker_images }}"
+- name: Create docker-compose directory
+  file:
+    path: "{{ docker_compose_path | default('/opt/docker-compose') }}"
+    state: directory
+    mode: '0755'
 
-- name: Lancer le conteneur si absent
-  ansible.builtin.shell: "{{ item.docker_run_var }}"
-  when: "'item.container_name' not in existing_container"
-  with_items: "{{ docker_images }}"
+- name: Initialize docker-compose.yml file
+  shell: |
+    compose_path="{{ docker_compose_path | default('/opt/docker-compose') }}/docker-compose.yml"
+    echo "services:" > "$compose_path"
+    echo "Initialized docker-compose.yml at $compose_path"
+
+- name: Add each service to docker-compose.yml
+  shell: |
+    compose_path="{{ docker_compose_path | default('/opt/docker-compose') }}/docker-compose.yml"
+    
+    # Parse JSON from stdout
+    json_data='{{ item.stdout }}'
+    echo "Processing JSON: $json_data"
+    
+    # Extract values using jq or basic parsing
+    service_name=$(echo "$json_data" | grep -o '"service_name": *"[^"]*"' | cut -d'"' -f4)
+    container_name=$(echo "$json_data" | grep -o '"container_name": *"[^"]*"' | cut -d'"' -f4)
+    image=$(echo "$json_data" | grep -o '"image": *"[^"]*"' | cut -d'"' -f4)
+    restart_policy=$(echo "$json_data" | grep -o '"restart_policy": *"[^"]*"' | cut -d'"' -f4)
+    command_args=$(echo "$json_data" | grep -o '"command": *"[^"]*"' | cut -d'"' -f4)
+    
+    echo "Service: $service_name"
+    
+    # Build service definition
+    {
+      echo "  $service_name:"
+      echo "    image: $image"
+      echo "    container_name: $container_name"
+      
+      # Add ports if they exist
+      ports=$(echo "$json_data" | grep -o '"ports": *\[[^]]*\]' | sed 's/"ports": *\[//; s/\]//; s/"//g')
+      if [[ -n "$ports" && "$ports" != "" ]]; then
+        echo "    ports:"
+        IFS=',' read -ra PORT_ARRAY <<< "$ports"
+        for port in "${PORT_ARRAY[@]}"; do
+          port=$(echo "$port" | xargs) # trim whitespace
+          if [[ -n "$port" ]]; then
+            echo "      - \"$port\""
+          fi
+        done
+      fi
+      
+      # Add environment if it exists
+      env_vars=$(echo "$json_data" | grep -o '"environment": *\[[^]]*\]' | sed 's/"environment": *\[//; s/\]//; s/"//g')
+      if [[ -n "$env_vars" && "$env_vars" != "" ]]; then
+        echo "    environment:"
+        IFS=',' read -ra ENV_ARRAY <<< "$env_vars"
+        for env in "${ENV_ARRAY[@]}"; do
+          env=$(echo "$env" | xargs) # trim whitespace
+          if [[ -n "$env" ]]; then
+            echo "      - $env"
+          fi
+        done
+      fi
+      
+      # Add volumes if they exist
+      volumes=$(echo "$json_data" | grep -o '"volumes": *\[[^]]*\]' | sed 's/"volumes": *\[//; s/\]//; s/"//g')
+      if [[ -n "$volumes" && "$volumes" != "" ]]; then
+        echo "    volumes:"
+        IFS=',' read -ra VOL_ARRAY <<< "$volumes"
+        for volume in "${VOL_ARRAY[@]}"; do
+          volume=$(echo "$volume" | xargs) # trim whitespace
+          if [[ -n "$volume" ]]; then
+            echo "      - $volume"
+          fi
+        done
+      fi
+      
+      # Add command if it exists
+      if [[ -n "$command_args" && "$command_args" != "" ]]; then
+        echo "    command: $command_args"
+      fi
+      
+      # Add restart policy
+      echo "    restart: $restart_policy"
+      echo ""
+      
+    } >> "$compose_path"
+    
+    echo "Added service: $service_name"
+  loop: "{{ parsed_services.results }}"
+  register: add_service
+  when: parsed_services.results is defined
+
+- name: Display generated docker-compose.yml
+  shell: "cat {{ docker_compose_path | default('/opt/docker-compose') }}/docker-compose.yml"
+  register: final_compose
+
+- name: Show generated compose file
+  debug:
+    msg: "{{ final_compose.stdout_lines }}"
+
+- name: Check if services are already running
+  shell: "docker-compose -f {{ docker_compose_path | default('/opt/docker-compose') }}/docker-compose.yml ps -q"
+  register: running_services
+  ignore_errors: yes
+
+- name: Stop existing services if running
+  shell: "docker-compose -f {{ docker_compose_path | default('/opt/docker-compose') }}/docker-compose.yml down"
+  when: running_services.stdout | length > 0
+  ignore_errors: yes
+
+- name: Start services with docker-compose
+  shell: |
+    cd "{{ docker_compose_path | default('/opt/docker-compose') }}"
+    pwd
+    ls -la
+    docker-compose up -d
+  register: compose_up_result
+  ignore_errors: yes
+  failed_when: false
+
+- name: Show docker-compose up results
+  debug:
+    msg: 
+      - "Return Code: {{ compose_up_result.rc }}"
+      - "Output: {{ compose_up_result.stdout_lines }}"
+      - "Error: {{ compose_up_result.stderr_lines if compose_up_result.stderr_lines else 'None' }}"
+
+- name: Wait for services to initialize
+  pause:
+    seconds: 30
+
+- name: Check services status
+  shell: "docker-compose -f {{ docker_compose_path | default('/opt/docker-compose') }}/docker-compose.yml ps"
+  register: services_status
+
+- name: Display final services status
+  debug:
+    msg: "{{ services_status.stdout_lines }}"

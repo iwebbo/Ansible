@@ -1,18 +1,18 @@
 ---
 # vars file for linux_docker_container_manage
-docker_images:
-  - name: "eclipse-mosquitto"
-    container_name: "eclipse-mosquitto"
-    ports: "1883:1883"
-    volumes: "$PWD/mosquitto/config:/mosquitto/config"
-    config: 
-    restart_policy: "unless-stopped"
-    docker_run_var: "docker run -d -it -p 1883:1883 eclipse-mosquitto:latest mosquitto -c /mosquitto-no-auth.conf"
-    #"docker run -it -p 1883:1883 eclipse-mosquitto:latest mosquitto -c /mosquitto-no-auth.conf"
-    #"docker run -it -p 1883:1883 -v '$PWD/mosquitto/config:/mosquitto/config' eclipse-mosquitto"
+# docker_images:
+#   - name: "eclipse-mosquitto"
+#     container_name: "eclipse-mosquitto"
+#     ports: "1883:1883"
+#     volumes: "$PWD/mosquitto/config:/mosquitto/config"
+#     config: 
+#     restart_policy: "unless-stopped"
+#     docker_run_var: "docker run -d -it -p 1883:1883 eclipse-mosquitto:latest mosquitto -c /mosquitto-no-auth.conf"
+#     #"docker run -it -p 1883:1883 eclipse-mosquitto:latest mosquitto -c /mosquitto-no-auth.conf"
+#     #"docker run -it -p 1883:1883 -v '$PWD/mosquitto/config:/mosquitto/config' eclipse-mosquitto"
 
-  - name: "m4dm4rtig4n/myelectricaldata:latest"
-    container_name: "myelectricaldata:latest"
-    ports: "5000:5000"
-    restart_policy: "unless-stopped"
-    docker_run_var: "docker run -d -it --restart=unless-stopped -v $(pwd)/myelectricaldata/data:/data -p 5000:5000 -e TZ='Europe/Paris' m4dm4rtig4n/myelectricaldata:latest"
+#   - name: "m4dm4rtig4n/myelectricaldata:latest"
+#     container_name: "myelectricaldata:latest"
+#     ports: "5000:5000"
+#     restart_policy: "unless-stopped"
+#     docker_run_var: "docker run -d -it --restart=unless-stopped -v $(pwd)/myelectricaldata/data:/data -p 5000:5000 -e TZ='Europe/Paris' m4dm4rtig4n/myelectricaldata:latest"
