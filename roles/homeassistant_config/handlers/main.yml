@@ -11,7 +11,6 @@
   ignore_errors: yes
 
 # Alternative si pas de token : redémarrage via API publique (si activée)
-## eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIwMWFmYmUxYWI1YWY0NWE0YmJkZGRiM2E1YTk4YWUwZiIsImlhdCI6MTc1MzMwNTY1MiwiZXhwIjoyMDY4NjY1NjUyfQ.7GaVHZdy67K51dFrLn3UUXwNUD8v7wXxQwzP8pyPy-s
 - name: restart_homeassistant_fallback
   uri:
     url: "http://{{ ha_host }}:{{ ha_port }}/api/services/homeassistant/restart"
