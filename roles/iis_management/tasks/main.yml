@@ -17,18 +17,6 @@
     msg: "Action '{{ action_iis }}' not supported. Allowed actions: {{ iis_actions_allowed | join(', ') }}"
   when: action_iis not in iis_actions_allowed
 
-- name: "Check if IIS is installed"
-  win_feature:
-    name: IIS-WebServerRole
-    state: present
-  register: iis_check
-  check_mode: yes
-
-- name: "Fail if IIS is not installed"
-  fail:
-    msg: "IIS is not installed on this system"
-  when: iis_check.reboot_required is defined and iis_check.reboot_required
-
 - name: "Start IIS"
   win_service:
     name: W3SVC
