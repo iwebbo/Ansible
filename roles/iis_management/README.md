@@ -1,38 +1,70 @@
-Role Name
-=========
+# Ansible Role: iis_management
 
-A brief description of the role goes here.
+your role description
 
-Requirements
-------------
+## General Information
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+**Author:** your name
+**License:** license (GPL-2.0-or-later, MIT, etc)
+**Minimum Ansible Version:** 2.1
 
-Role Variables
---------------
+## Variables
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+### main
 
-Dependencies
-------------
+```yaml
+action_iis: status
+iis_actions_allowed:
+- start
+- stop
+- restart
+- status
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+```
 
-Example Playbook
-----------------
+## Main Tasks
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+- Check if Windows system
+- Display system information
+- Validate allowed action
+- Check if IIS is installed
+- Fail if IIS is not installed
+- Start IIS
+- Stop IIS
+- Restart IIS
+- Get IIS status
+- Display IIS status
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+## Handlers
 
-License
--------
+```yaml
+- name: iis started
+  debug:
+    msg: IIS has been started successfully
+- name: iis stopped
+  debug:
+    msg: IIS has been stopped successfully
+- name: iis restarted
+  debug:
+    msg: IIS has been restarted successfully
 
-BSD
+```
 
-Author Information
-------------------
+## Role Structure
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+```
+defaults/
+    └── main.yml
+handlers/
+    └── main.yml
+meta/
+    └── main.yml
+tasks/
+    └── main.yml
+tests/
+    ├── inventory
+    └── test.yml
+vars/
+    └── main.yml
+README.md
+```
