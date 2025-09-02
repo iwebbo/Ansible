@@ -1,35 +1,23 @@
 ---
-# vars file for apache2-management
-action_apache: "start"  # Options: start, stop, restart, reload, graceful
-apache_check_status: true
-apache_check_config: true
-apache_wait_timeout: 30
-apache_validate_config_before_action: true
+# Variables par défaut pour apache2-management
+action_apache: "status"
 
-# Variables internes du rôle
+# Actions autorisées
 apache_actions_allowed:
   - start
   - stop
   - restart
   - reload
-  - graceful
-
-# Noms de service Apache selon la distribution
+  - status
+  
+# Mapping des services Apache selon la distribution
 apache_service_names:
-  RedHat: "httpd"
-  CentOS: "httpd" 
-  Rocky: "httpd"
-  AlmaLinux: "httpd"
-  Fedora: "httpd"
-  Ubuntu: "apache2"
-  Debian: "apache2"
-
-# Commandes de test de configuration
-apache_config_test:
-  RedHat: "httpd -t"
-  CentOS: "httpd -t"
-  Rocky: "httpd -t"
-  AlmaLinux: "httpd -t"
-  Fedora: "httpd -t"
-  Ubuntu: "apache2ctl configtest"
-  Debian: "apache2ctl configtest"
+  Debian: apache2
+  Ubuntu: apache2
+  RedHat: httpd
+  CentOS: httpd
+  Fedora: httpd
+  Rocky: httpd
+  AlmaLinux: httpd
+  Amazon: httpd
+  SLES: apache2

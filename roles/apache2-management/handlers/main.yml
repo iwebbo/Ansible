@@ -1,57 +1,16 @@
 ---
-# handlers file for apache2-management
-- name: execute apache action
-  block:
-    - name: Exécuter l'action Apache - {{ action_apache }}
-      service:
-        name: "{{ apache_service_name }}"
-        state: "{{ 'started' if action_apache == 'start' else 'stopped' if action_apache == 'stop' else 'restarted' }}"
-      when: action_apache in ['start', 'stop', 'restart']
-
-    - name: Exécuter le reload Apache
-      service:
-        name: "{{ apache_service_name }}"
-        state: reloaded
-      when: action_apache == 'reload'
-
-    - name: Exécuter le graceful restart Apache
-      shell: "{{ apache_test_command.split()[0] }}ctl graceful"
-      when: action_apache == 'graceful'
-
-    - name: Attendre que le service soit complètement démarré/arrêté
-      wait_for:
-        port: 80
-        host: "{{ ansible_default_ipv4.address | default('127.0.0.1') }}"
-        timeout: "{{ apache_wait_timeout }}"
-      when: action_apache in ['start', 'restart', 'graceful']
-      ignore_errors: true
-
-  listen: "execute apache action"
-
-- name: verify apache status after action
-  shell: "systemctl status {{ apache_service_name }} | grep 'Active:'"
-  register: final_status
-  failed_when: false
-  changed_when: false
-  listen: "execute apache action"
-
-- name: display final apache status
+- name: apache started
   debug:
-    msg: "Statut final d'Apache: {{ final_status.stdout }}"
-  listen: "execute apache action"
+    msg: "Apache a été démarré avec succès"
 
-- name: verify apache ports after start actions
-  shell: "netstat -tlnp | grep ':80\\|:443' | grep {{ apache_service_name }}"
-  register: final_ports
-  failed_when: false
-  changed_when: false
-  when: action_apache in ['start', 'restart', 'graceful']
-  listen: "execute apache action"
-
-- name: display apache listening ports
+- name: apache stopped
   debug:
-    msg: "Ports d'écoute Apache: {{ final_ports.stdout_lines | default(['Aucun port détecté']) }}"
-  when: 
-    - final_ports is defined
-    - action_apache in ['start', 'restart', 'graceful']
-  listen: "execute apache action"
+    msg: "Apache a été arrêté avec succès"
+
+- name: apache restarted
+  debug:
+    msg: "Apache a été redémarré avec succès"
+
+- name: apache reloaded
+  debug:
+    msg: "Apache a été rechargé avec succès"

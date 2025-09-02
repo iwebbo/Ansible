@@ -12,13 +12,23 @@ script: !include scripts.yaml
 scene: !include scenes.yaml
 switch: !include switchs.yaml
 
-   
+auth_oidc:
+  client_id: "home-assistant"
+  client_secret: ""  # Vide si client public
+  discovery_url: "http://192.168.1.37:8080/realms/home"
+  scopes:
+    - openid
+    - profile
+    - email
+
+#Proxy   
 http:
   use_x_forwarded_for: true
   trusted_proxies:
     - 192.168.1.2
-###Sensor 
+
+#Sensor 
 sensor:
   - platform: websocket_api
 
-## Template here
+#Template

@@ -1,0 +1,67 @@
+---
+# tasks file for iis_management
+- name: "Check if Windows system"
+  fail:
+    msg: "This role only works on Windows"
+  when: ansible_os_family != "Windows"
+
+- name: "Display system information"
+  debug:
+    msg:
+      - "System: {{ ansible_os_family }}"
+      - "Windows version: {{ ansible_distribution }}"
+      - "Requested action: {{ action_iis }}"
+
+- name: "Validate allowed action"
+  fail:
+    msg: "Action '{{ action_iis }}' not supported. Allowed actions: {{ iis_actions_allowed | join(', ') }}"
+  when: action_iis not in iis_actions_allowed
+
+- name: "Check if IIS is installed"
+  win_feature:
+    name: IIS-WebServerRole
+    state: present
+  register: iis_check
+  check_mode: yes
+
+- name: "Fail if IIS is not installed"
+  fail:
+    msg: "IIS is not installed on this system"
+  when: iis_check.reboot_required is defined and iis_check.reboot_required
+
+- name: "Start IIS"
+  win_service:
+    name: W3SVC
+    state: started
+  when: action_iis == 'start'
+  notify: "iis started"
+
+- name: "Stop IIS"
+  win_service:
+    name: W3SVC
+    state: stopped
+  when: action_iis == 'stop'
+  notify: "iis stopped"
+
+- name: "Restart IIS"
+  win_service:
+    name: W3SVC
+    state: restarted
+  when: action_iis == 'restart'
+  notify: "iis restarted"
+
+- name: "Get IIS status"
+  win_service:
+    name: W3SVC
+  register: iis_status
+  when: action_iis == 'status'
+
+- name: "Display IIS status"
+  debug:
+    msg:
+      - "=== IIS STATUS ==="
+      - "Service: W3SVC (World Wide Web Publishing Service)"
+      - "State: {{ iis_status.state | default('Unknown') }}"
+      - "Start mode: {{ iis_status.start_mode | default('Unknown') }}"
+      - "PID: {{ iis_status.process_id | default('N/A') }}"
+  when: action_iis == 'status'
