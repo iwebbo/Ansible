@@ -1,0 +1,29 @@
+---
+# vars file for security_report
+report_dir: "security_reports"
+security_scan_rootkits: true
+critical_services:
+  - ssh
+  - cron
+  - rsyslog
+
+# Alert thresholds
+max_security_updates: 10
+max_root_users: 1
+critical_ports:
+  - 21    # FTP
+  - 23    # Telnet
+  - 135   # RPC
+  - 139   # NetBIOS
+  - 445   # SMB
+  - 1433  # SQL Server
+  - 3389  # RDP
+  - 5900  # VNC
+  
+# roles/security_report/vars/main.yml
+security_categories:
+  critical: "Critical - Immediate action required"
+  high: "High - Action required within 24h"
+  medium: "Medium - Action required within 7 days"
+  low: "Low - Monitor and plan remediation"
+  info: "Information - For awareness"
