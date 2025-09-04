@@ -1,4 +1,8 @@
 ---
+- name: "Debug"
+  debug:
+    var: ansible_facts
+
 - name: "Détecter le service Apache selon la distribution"
   set_fact:
     apache_service_name: "{{ apache_service_names[ansible_distribution] | default('apache2') }}"
