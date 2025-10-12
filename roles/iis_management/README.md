@@ -1,70 +1,38 @@
-# Ansible Role: iis_management
+Role Name
+=========
 
-your role description
+A brief description of the role goes here.
 
-## General Information
+Requirements
+------------
 
-**Author:** your name
-**License:** license (GPL-2.0-or-later, MIT, etc)
-**Minimum Ansible Version:** 2.1
+Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
 
-## Variables
+Role Variables
+--------------
 
-### main
+A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
 
-```yaml
-action_iis: status
-iis_actions_allowed:
-- start
-- stop
-- restart
-- status
+Dependencies
+------------
 
-```
+A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
 
-## Main Tasks
+Example Playbook
+----------------
 
-- Check if Windows system
-- Display system information
-- Validate allowed action
-- Check if IIS is installed
-- Fail if IIS is not installed
-- Start IIS
-- Stop IIS
-- Restart IIS
-- Get IIS status
-- Display IIS status
+Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
 
-## Handlers
+    - hosts: servers
+      roles:
+         - { role: username.rolename, x: 42 }
 
-```yaml
-- name: iis started
-  debug:
-    msg: IIS has been started successfully
-- name: iis stopped
-  debug:
-    msg: IIS has been stopped successfully
-- name: iis restarted
-  debug:
-    msg: IIS has been restarted successfully
+License
+-------
 
-```
+BSD
 
-## Role Structure
+Author Information
+------------------
 
-```
-defaults/
-    └── main.yml
-handlers/
-    └── main.yml
-meta/
-    └── main.yml
-tasks/
-    └── main.yml
-tests/
-    ├── inventory
-    └── test.yml
-vars/
-    └── main.yml
-README.md
-```
+An optional section for the role authors to include contact information, or a website (HTML is not allowed).

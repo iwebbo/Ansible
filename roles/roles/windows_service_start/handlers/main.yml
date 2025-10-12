@@ -1,8 +1,0 @@
----
-# handlers file for windows_service_start
-- name: restart services
-  win_service:
-    name: "{{ item }}"
-    state: restarted
-  loop: "{{ windows_services | default([]) }}"
-  when: windows_services is defined and windows_services | length > 0

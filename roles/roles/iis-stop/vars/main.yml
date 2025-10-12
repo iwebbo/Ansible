@@ -1,5 +1,0 @@
----
-# vars file for iis-stop
-iis_default_site_name: "Default Web Site"
-iis_app_pools:
-  - DefaultAppPool

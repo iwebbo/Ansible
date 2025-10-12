@@ -1,7 +1,0 @@
----
-# vars file for windows_ollama_list
-ollama_executable: "ollama"
-ollama_timeout: 30
-ollama_display_output: true
-ollama_save_to_file: false
-ollama_output_file: "C:\\temp\\ollama_models.txt"

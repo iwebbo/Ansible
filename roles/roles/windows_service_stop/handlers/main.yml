@@ -1,8 +1,0 @@
----
-# handlers file for windows_service_stop
-- name: stop services
-  win_service:
-    name: "{{ item }}"
-    state: stopped
-  loop: "{{ windows_services | default([]) }}"
-  when: windows_services is defined and windows_services | length > 0

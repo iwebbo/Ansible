@@ -1,5 +1,5 @@
 ---
-- name: "Debug"
+- name: "Debug in case ansible_distribution doesn't exite replace by ansible_facts.facter_os.name"
   debug:
     var: ansible_facts
 

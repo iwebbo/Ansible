@@ -1,5 +1,0 @@
----
-# vars file for windows_python_install
-python_version: "3.9.7"
-python_installer_url: "https://www.python.org/ftp/python/{{ python_version }}/python-{{ python_version }}-amd64.exe"
-python_install_dir: "C:\\Python{{ python_version | regex_replace('\\.', '') }}"
