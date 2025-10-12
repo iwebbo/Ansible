@@ -1,0 +1,22 @@
+---
+# tasks file for windows_python_delete
+- name: Check if Python is installed and get its path
+  win_command: |
+    $pythonPath = Get-Command python -ErrorAction SilentlyContinue
+    if ($pythonPath) {
+        $version = & python --version 2>&1
+        Write-Output "Python is installed with version: $version"
+        Write-Output "$($pythonPath.Source)"
+    } else {
+        Write-Output "Python is not installed"
+    }
+  register: python_info
+
+- name: Uninstall Python if installed and matches the specified version
+  win_shell: |
+    Start-Process msiexec.exe -ArgumentList "/x $($uninstall_string) /quiet" -Wait
+  when: >
+    python_info.stdout | regex_search("Python is installed with version: {{ target_version }}") and 
+    python_info.stdout_lines[-1] != "Python is not installed"
+  vars:
+    uninstall_string: "{{ python_info.stdout_lines[-2].split(':')[1].strip() }}"

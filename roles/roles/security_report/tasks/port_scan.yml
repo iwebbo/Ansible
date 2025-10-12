@@ -1,0 +1,14 @@
+---
+# roles/security_report/tasks/port_scan.yml
+- name: Get listening ports
+  shell: |
+    netstat -tuln | awk 'NR>2 {print $1,$4}' | sort | uniq
+  register: listening_ports
+  changed_when: false
+  failed_when: false
+
+- name: Check for common vulnerable services
+  shell: |
+    netstat -tuln | grep -E ':(21|23|53|80|135|139|445|1433|3389|5432|5900)' || echo "None found"
+  register: vulnerable_ports
+  changed_when: false

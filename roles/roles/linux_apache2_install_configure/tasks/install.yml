@@ -1,0 +1,50 @@
+---
+# roles/apache2/tasks/install.yml
+- name: Update package cache (Debian/Ubuntu)
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+  tags: install
+
+- name: Update package cache (RedHat/CentOS)
+  yum:
+    update_cache: yes
+  when: ansible_os_family == "RedHat"
+  tags: install
+
+- name: Install Apache2 (Debian/Ubuntu)
+  apt:
+    name: "{{ apache_packages_debian }}"
+    state: present
+  when: ansible_os_family == "Debian"
+  notify: restart apache
+  tags: install
+
+- name: Install Apache2 (RedHat/CentOS)
+  yum:
+    name: "{{ apache_packages_redhat }}"
+    state: present
+  when: ansible_os_family == "RedHat"
+  notify: restart apache
+  tags: install
+
+- name: Enable Apache2 service
+  systemd:
+    name: "{{ apache_service_name }}"
+    enabled: yes
+    state: started
+  tags: install
+
+- name: Create Apache2 directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ apache_user }}"
+    group: "{{ apache_group }}"
+    mode: '0755'
+  loop:
+    - "{{ apache_vhost_dir }}"
+    - "{{ apache_log_dir }}"
+    - /var/www/html
+  tags: install

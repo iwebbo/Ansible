@@ -1,0 +1,10 @@
+---
+# vars file for iis_management
+action_iis: "status"
+
+# Actions autorisées
+iis_actions_allowed:
+  - start
+  - stop
+  - restart
+  - status

@@ -1,0 +1,60 @@
+# {{ ansible_managed }}
+# Virtual Host Website: {{ item.name }}
+
+<VirtualHost *:{{ item.port | default(apache_vhosts_defaults.port) }}>
+    ServerName {{ item.server_name | default(item.name) }}
+{% if item.server_alias is defined %}
+    ServerAlias {{ item.server_alias }}
+{% endif %}
+    
+    DocumentRoot {{ item.document_root | default('/var/www/' + item.name) }}
+    
+    # Logs
+    ErrorLog {{ apache_log_dir }}/{{ item.name }}/error.log
+    CustomLog {{ apache_log_dir }}/{{ item.name }}/access.log {{ item.access_log_format | default(apache_vhosts_defaults.access_log_format) }}
+    LogLevel {{ item.error_log_level | default(apache_vhosts_defaults.error_log_level) }}
+    
+    # Directory configuration
+    <Directory {{ item.document_root | default('/var/www/' + item.name) }}>
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+{% if item.directory_options is defined %}
+        {{ item.directory_options | indent(8) }}
+{% endif %}
+    </Directory>
+    
+{% if item.ssl is defined and item.ssl.enabled | default(false) %}
+    # SSL Configuration
+    SSLEngine on
+    SSLCertificateFile {{ item.ssl.certificate | default('/etc/ssl/certs/ssl-cert-snakeoil.pem') }}
+    SSLCertificateKeyFile {{ item.ssl.certificate_key | default('/etc/ssl/private/ssl-cert-snakeoil.key') }}
+{% if item.ssl.certificate_chain is defined %}
+    SSLCertificateChainFile {{ item.ssl.certificate_chain }}
+{% endif %}
+    
+    # SSL Security
+    SSLProtocol all -SSLv2 -SSLv3
+    SSLCipherSuite ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305
+    SSLHonorCipherOrder on
+    
+{% endif %}
+{% if item.custom_directives is defined %}
+    # Custom Directives
+    {{ item.custom_directives | indent(4) }}
+{% endif %}
+</VirtualHost>
+
+{% if item.redirect_to_ssl is defined and item.redirect_to_ssl %}
+# HTTP to HTTPS redirect
+<VirtualHost *:80>
+    ServerName {{ item.server_name | default(item.name) }}
+{% if item.server_alias is defined %}
+    ServerAlias {{ item.server_alias }}
+{% endif %}
+    
+    RewriteEngine On
+    RewriteCond %{HTTPS} off
+    RewriteRule ^(.*)$ https://{{ item.server_name | default(item.name) }}$1 [R=301,L]
+</VirtualHost>
+{% endif %}

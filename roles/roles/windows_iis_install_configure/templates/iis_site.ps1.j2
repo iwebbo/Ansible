@@ -1,0 +1,148 @@
+# {{ ansible_managed }}
+# IIS Site Configuration Script for {{ item.name }}
+
+Import-Module WebAdministration
+
+$changes = 0
+$siteName = "{{ item.name }}"
+
+# Function to log changes
+function Log-Change {
+    param([string]$message)
+    Write-Output $message
+    $script:changes++
+}
+
+# Check if site exists
+$site = Get-Website -Name $siteName
+if (-not $site) {
+    Write-Output "Site $siteName not found. Skipping configuration."
+    exit 0
+}
+
+# Configure site-specific settings
+# --------------------------------------------------
+
+# Configure MIME types
+$mimeTypes = @{
+{% if item.mime_types is defined %}
+{% for mime_type in item.mime_types %}
+    "{{ mime_type.extension }}" = "{{ mime_type.type }}";
+{% endfor %}
+{% else %}
+    ".json" = "application/json";
+    ".svg" = "image/svg+xml";
+    ".woff" = "font/woff";
+    ".woff2" = "font/woff2";
+    ".webp" = "image/webp";
+{% endif %}
+}
+
+foreach ($mime in $mimeTypes.GetEnumerator()) {
+    $extension = $mime.Key
+    $mimeType = $mime.Value
+    
+    $existingMime = Get-WebConfigurationProperty -Filter "//staticContent/mimeMap[@fileExtension='$extension']" -PSPath "IIS:\Sites\$siteName" -Name "fileExtension" -ErrorAction SilentlyContinue
+    
+    if (-not $existingMime) {
+        try {
+            Add-WebConfiguration -Filter "//staticContent" -PSPath "IIS:\Sites\$siteName" -Value @{fileExtension="$extension";mimeType="$mimeType"}
+            Log-Change "Added MIME type for $siteName: $extension = $mimeType"
+        } catch {
+            # Might fail if already defined at a higher level, which is fine
+        }
+    }
+}
+
+# Configure custom error pages
+{% if item.error_pages is defined %}
+foreach ($errorCode in @({% for error in item.error_pages %}{{ error.code }}{% if not loop.last %}, {% endif %}{% endfor %})) {
+    $errorPage = Get-WebConfigurationProperty -Filter "//httpErrors/error[@statusCode='$errorCode']" -PSPath "IIS:\Sites\$siteName" -Name "statusCode" -ErrorAction SilentlyContinue
+    
+    if (-not $errorPage) {
+        {% for error in item.error_pages %}
+        if ($errorCode -eq {{ error.code }}) {
+            Set-WebConfigurationProperty -Filter "//httpErrors/error[@statusCode='{{ error.code }}']" -PSPath "IIS:\Sites\$siteName" -Name "prefixLanguageFilePath" -Value "{{ error.path | regex_replace('\\\\', '\\\\\\\\') }}"
+            Log-Change "Added custom error page for $siteName: {{ error.code }} = {{ error.path }}"
+        }
+        {% endfor %}
+    }
+}
+{% endif %}
+
+# Configure response headers
+{% if item.headers is defined %}
+$customHeaders = @{
+{% for header_name, header_value in item.headers.items() %}
+    "{{ header_name }}" = "{{ header_value }}";
+{% endfor %}
+}
+
+foreach ($header in $customHeaders.GetEnumerator()) {
+    $headerName = $header.Key
+    $headerValue = $header.Value
+    
+    $existingHeader = Get-WebConfiguration -Filter "//httpProtocol/customHeaders/add[@name='$headerName']" -PSPath "IIS:\Sites\$siteName" -ErrorAction SilentlyContinue
+    
+    if (-not $existingHeader) {
+        Add-WebConfiguration -Filter "//httpProtocol/customHeaders" -PSPath "IIS:\Sites\$siteName" -Value @{name="$headerName";value="$headerValue"}
+        Log-Change "Added header for $siteName: $headerName = $headerValue"
+    } elseif ($existingHeader.Attributes["value"].Value -ne $headerValue) {
+        Set-WebConfigurationProperty -Filter "//httpProtocol/customHeaders/add[@name='$headerName']" -PSPath "IIS:\Sites\$siteName" -Name "value" -Value $headerValue
+        Log-Change "Updated header for $siteName: $headerName = $headerValue"
+    }
+}
+{% endif %}
+
+# Configure URL Rewrite rules (if URL Rewrite module is installed)
+$urlRewriteModule = Get-WebConfiguration -Filter "//globalModules/add[@name='RewriteModule']" -PSPath "MACHINE/WEBROOT/APPHOST" -ErrorAction SilentlyContinue
+
+if ($urlRewriteModule) {
+    {% if item.url_rewrite_rules is defined %}
+    # Clear existing rules first
+    Clear-WebConfiguration -Filter "//rewrite/rules/rule" -PSPath "IIS:\Sites\$siteName" -ErrorAction SilentlyContinue
+    
+    {% for rule in item.url_rewrite_rules %}
+    # Add rule: {{ rule.name }}
+    Add-WebConfigurationProperty -Filter "//rewrite/rules" -PSPath "IIS:\Sites\$siteName" -Name "." -Value @{name="{{ rule.name }}"; patternSyntax="{{ rule.pattern_syntax | default('Regular Expressions') }}"; stopProcessing="{{ rule.stop_processing | default('true') | lower }}"}
+    
+    # Configure rule pattern
+    Set-WebConfigurationProperty -Filter "//rewrite/rules/rule[@name='{{ rule.name }}']/match" -PSPath "IIS:\Sites\$siteName" -Name "url" -Value "{{ rule.pattern }}"
+    
+    # Configure rule action
+    Set-WebConfigurationProperty -Filter "//rewrite/rules/rule[@name='{{ rule.name }}']/action" -PSPath "IIS:\Sites\$siteName" -Name "type" -Value "{{ rule.action_type }}"
+    Set-WebConfigurationProperty -Filter "//rewrite/rules/rule[@name='{{ rule.name }}']/action" -PSPath "IIS:\Sites\$siteName" -Name "url" -Value "{{ rule.action_value }}"
+    
+    {% if rule.conditions is defined %}
+    # Add conditions
+    {% for condition in rule.conditions %}
+    Add-WebConfigurationProperty -Filter "//rewrite/rules/rule[@name='{{ rule.name }}']/conditions" -PSPath "IIS:\Sites\$siteName" -Name "." -Value @{input="{{ condition.input }}"; pattern="{{ condition.pattern }}"; negate="{{ condition.negate | default('false') | lower }}"}
+    {% endfor %}
+    {% endif %}
+    
+    Log-Change "Added URL Rewrite rule for $siteName: {{ rule.name }}"
+    {% endfor %}
+    {% endif %}
+}
+
+# Configure application-level settings
+{% if item.web_config_settings is defined %}
+{% for section, settings in item.web_config_settings.items() %}
+# Configure {{ section }} settings
+{% for setting_name, setting_value in settings.items() %}
+try {
+    Set-WebConfigurationProperty -Filter "//{{ section }}" -PSPath "IIS:\Sites\$siteName" -Name "{{ setting_name }}" -Value "{{ setting_value }}" -ErrorAction Stop
+    Log-Change "Set {{ section }}.{{ setting_name }} = {{ setting_value }} for $siteName"
+} catch {
+    Write-Output "Could not set {{ section }}.{{ setting_name }}: $_"
+}
+{% endfor %}
+{% endfor %}
+{% endif %}
+
+# Output results
+if ($changes -eq 0) {
+    Write-Output "No changes needed for site $siteName"
+} else {
+    Write-Output "Completed $changes changes to site $siteName configuration"
+}

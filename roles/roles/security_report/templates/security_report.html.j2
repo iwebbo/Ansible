@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapport de Sécurité - {{ inventory_hostname }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { background: #2c3e50; color: white; padding: 20px; border-radius: 5px; }
+        .section { margin: 20px 0; padding: 15px; border-left: 4px solid #3498db; background: #f8f9fa; }
+        .critical { border-left-color: #e74c3c; background: #fdf2f2; }
+        .warning { border-left-color: #f39c12; background: #fef9e7; }
+        .success { border-left-color: #27ae60; background: #f0f8f0; }
+        .info { border-left-color: #3498db; background: #f0f7ff; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #34495e; color: white; }
+        .metric { display: inline-block; margin: 10px; padding: 15px; border-radius: 5px; text-align: center; min-width: 120px; }
+        .metric-critical { background: #e74c3c; color: white; }
+        .metric-warning { background: #f39c12; color: white; }
+        .metric-success { background: #27ae60; color: white; }
+        .metric-info { background: #3498db; color: white; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Rapport de Sécurité</h1>
+        <h2>{{ inventory_hostname }}</h2>
+        <p>Généré le: {{ ansible_date_time.date }} à {{ ansible_date_time.time }}</p>
+        <p>OS: {{ ansible_distribution | default('Unknown') }} {{ ansible_distribution_version | default('') }}</p>
+    </div>
+
+    <!-- Métriques rapides -->
+    <div class="section">
+        <h3>📊 Métriques de Sécurité</h3>
+        
+        {% set security_updates_count = 0 %}
+        {% if ansible_os_family == "Debian" and debian_security_updates is defined and debian_security_updates.stdout is defined %}
+            {% set security_updates_count = debian_security_updates.stdout | int %}
+        {% elif ansible_os_family == "RedHat" and redhat_security_updates is defined and redhat_security_updates.stdout is defined %}
+            {% set security_updates_count = redhat_security_updates.stdout | int %}
+        {% endif %}
+        
+        <div class="metric {% if security_updates_count > 10 %}metric-critical{% elif security_updates_count > 0 %}metric-warning{% else %}metric-success{% endif %}">
+            <strong>{{ security_updates_count }}</strong><br>
+            Mises à jour sécurité
+        </div>
+        
+        {% set root_users_count = 0 %}
+        {% if root_users is defined and root_users.stdout_lines is defined %}
+            {% set root_users_count = root_users.stdout_lines | length %}
+        {% endif %}
+        
+        <div class="metric {% if root_users_count > 1 %}metric-critical{% else %}metric-success{% endif %}">
+            <strong>{{ root_users_count }}</strong><br>
+            Utilisateurs root
+        </div>
+        
+        {% set writable_files_count = 0 %}
+        {% if world_writable_files is defined and world_writable_files.stdout_lines is defined %}
+            {% set writable_files_count = world_writable_files.stdout_lines | length %}
+        {% endif %}
+        
+        <div class="metric {% if writable_files_count > 0 %}metric-warning{% else %}metric-success{% endif %}">
+            <strong>{{ writable_files_count }}</strong><br>
+            Fichiers world-writable
+        </div>
+        
+        {% set ports_count = 0 %}
+        {% if listening_ports is defined and listening_ports.stdout_lines is defined %}
+            {% set ports_count = listening_ports.stdout_lines | length %}
+        {% endif %}
+        
+        <div class="metric metric-info">
+            <strong>{{ ports_count }}</strong><br>
+            Ports ouverts
+        </div>
+    </div>
+
+    <!-- Mises à jour de sécurité -->
+    <div class="section {% if security_updates_count > 0 %}warning{% else %}success{% endif %}">
+        <h3>🔒 Mises à jour de sécurité</h3>
+        {% if security_updates_count > 0 %}
+            <p><strong>{{ security_updates_count }} mises à jour de sécurité disponibles</strong></p>
+            {% if ansible_os_family == "Debian" and debian_security_list is defined and debian_security_list.stdout is defined %}
+                <pre>{{ debian_security_list.stdout }}</pre>
+            {% elif ansible_os_family == "RedHat" and redhat_security_list is defined and redhat_security_list.stdout is defined %}
+                <pre>{{ redhat_security_list.stdout }}</pre>
+            {% endif %}
+        {% else %}
+            <p>✅ Système à jour - Aucune mise à jour de sécurité en attente</p>
+        {% endif %}
+    </div>
+
+    <!-- Analyse des ports -->
+    {% set has_vulnerable_ports = false %}
+    {% if vulnerable_ports is defined and vulnerable_ports.stdout is defined and vulnerable_ports.stdout != "None found" %}
+        {% set has_vulnerable_ports = true %}
+    {% endif %}
+    
+    <div class="section {% if has_vulnerable_ports %}critical{% else %}success{% endif %}">
+        <h3>🌐 Analyse des ports réseau</h3>
+        {% if has_vulnerable_ports %}
+            <div style="color: #e74c3c; font-weight: bold;">
+                ⚠️ Services potentiellement vulnérables détectés:
+                <pre>{{ vulnerable_ports.stdout }}</pre>
+            </div>
+        {% else %}
+            <p>✅ Aucun service vulnérable connu détecté</p>
+        {% endif %}
+        
+        <h4>Ports en écoute:</h4>
+        {% if listening_ports is defined and listening_ports.stdout is defined %}
+            <pre>{{ listening_ports.stdout }}</pre>
+        {% else %}
+            <p>Aucune information sur les ports disponible</p>
+        {% endif %}
+    </div>
+
+    <!-- Audit des utilisateurs -->
+    {% set has_user_issues = false %}
+    {% if (root_users is defined and root_users.stdout_lines is defined and root_users.stdout_lines | length > 1) or
+          (no_password_users is defined and no_password_users.stdout_lines is defined and no_password_users.stdout_lines | length > 0) %}
+        {% set has_user_issues = true %}
+    {% endif %}
+    
+    <div class="section {% if has_user_issues %}warning{% else %}success{% endif %}">
+        <h3>👥 Audit des utilisateurs</h3>
+        
+        {% if root_users is defined and root_users.stdout_lines is defined %}
+            {% if root_users.stdout_lines | length > 1 %}
+                <div style="color: #f39c12; font-weight: bold;">
+                    ⚠️ Plusieurs utilisateurs avec privilèges root:
+                    <ul>
+                    {% for user in root_users.stdout_lines %}
+                        <li>{{ user }}</li>
+                    {% endfor %}
+                    </ul>
+                </div>
+            {% else %}
+                <p>✅ Un seul utilisateur root configuré</p>
+            {% endif %}
+        {% endif %}
+
+        {% if no_password_users is defined and no_password_users.stdout_lines is defined %}
+            {% if no_password_users.stdout_lines | length > 0 %}
+                <div style="color: #e74c3c; font-weight: bold;">
+                    🚨 Utilisateurs sans mot de passe:
+                    <ul>
+                    {% for user in no_password_users.stdout_lines %}
+                        <li>{{ user }}</li>
+                    {% endfor %}
+                    </ul>
+                </div>
+            {% else %}
+                <p>✅ Tous les utilisateurs ont un mot de passe</p>
+            {% endif %}
+        {% endif %}
+
+        {% if inactive_users is defined and inactive_users.stdout_lines is defined and inactive_users.stdout_lines | length > 0 %}
+            <div style="color: #f39c12;">
+                ℹ️ Utilisateurs inactifs (90+ jours):
+                <ul>
+                {% for user in inactive_users.stdout_lines %}
+                    <li>{{ user }}</li>
+                {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Configuration SSH -->
+    <div class="section info">
+        <h3>🔑 Configuration SSH</h3>
+        {% if ssh_config is defined and ssh_config.stdout is defined %}
+            <pre>{{ ssh_config.stdout }}</pre>
+        {% else %}
+            <p>Configuration SSH non disponible</p>
+        {% endif %}
+        
+        {% if ssh_key_perms is defined and ssh_key_perms.results is defined %}
+            <h4>Clés SSH trouvées:</h4>
+            <table>
+                <tr><th>Fichier</th><th>Permissions</th><th>Propriétaire</th></tr>
+                {% for key in ssh_key_perms.results %}
+                    {% if key.stat is defined and key.stat.exists %}
+                    <tr>
+                        <td>{{ key.stat.path | default('N/A') }}</td>
+                        <td>{{ key.stat.mode | default('N/A') }}</td>
+                        <td>{{ key.stat.pw_name | default('N/A') }}</td>
+                    </tr>
+                    {% endif %}
+                {% endfor %}
+            </table>
+        {% endif %}
+    </div>
+
+    <!-- Permissions de fichiers -->
+    <div class="section {% if writable_files_count > 0 %}warning{% else %}success{% endif %}">
+        <h3>📁 Permissions de fichiers</h3>
+        
+        {% if writable_files_count > 0 %}
+            <div style="color: #f39c12; font-weight: bold;">
+                ⚠️ Fichiers world-writable trouvés:
+                {% if world_writable_files.stdout is defined %}
+                    <pre>{{ world_writable_files.stdout }}</pre>
+                {% endif %}
+            </div>
+        {% else %}
+            <p>✅ Aucun fichier world-writable critique trouvé</p>
+        {% endif %}
+
+        {% if suid_sgid_files is defined and suid_sgid_files.stdout_lines is defined and suid_sgid_files.stdout_lines | length > 0 %}
+            <h4>Fichiers SUID/SGID:</h4>
+            {% if suid_sgid_files.stdout is defined %}
+                <pre>{{ suid_sgid_files.stdout }}</pre>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    <!-- Scan rootkit -->
+    {% if rkhunter_results is defined and rkhunter_results.stdout is defined %}
+    <div class="section {% if 'Warning' in rkhunter_results.stdout %}critical{% else %}success{% endif %}">
+        <h3>🛡️ Scan Rootkit (rkhunter)</h3>
+        {% if 'Warning' in rkhunter_results.stdout %}
+            <div style="color: #e74c3c; font-weight: bold;">
+                🚨 Avertissements détectés:
+            </div>
+        {% else %}
+            <p>✅ Aucun rootkit détecté</p>
+        {% endif %}
+        <pre>{{ rkhunter_results.stdout }}</pre>
+    </div>
+    {% endif %}
+
+    <!-- Recommandations -->
+    <div class="section">
+        <h3>💡 Recommandations</h3>
+        <ul>
+            {% if security_updates_count > 0 %}
+                <li>🔴 <strong>Critique:</strong> Appliquer les {{ security_updates_count }} mises à jour de sécurité</li>
+            {% endif %}
+            {% if root_users_count > 1 %}
+                <li>🟡 <strong>Important:</strong> Revoir les utilisateurs avec privilèges root</li>
+            {% endif %}
+            {% if no_password_users is defined and no_password_users.stdout_lines is defined and no_password_users.stdout_lines | length > 0 %}
+                <li>🔴 <strong>Critique:</strong> Configurer des mots de passe pour tous les comptes</li>
+            {% endif %}
+            {% if has_vulnerable_ports %}
+                <li>🔴 <strong>Critique:</strong> Sécuriser ou fermer les services vulnérables</li>
+            {% endif %}
+            {% if writable_files_count > 0 %}
+                <li>🟡 <strong>Important:</strong> Corriger les permissions des fichiers world-writable</li>
+            {% endif %}
+            <li>🔵 <strong>Général:</strong> Planifier des scans de sécurité réguliers</li>
+            <li>🔵 <strong>Général:</strong> Activer et configurer un système de monitoring</li>
+        </ul>
+    </div>
+
+    <footer style="margin-top: 40px; text-align: center; color: #7f8c8d;">
+        <hr>
+        <p>Rapport généré automatiquement par Ansible Security Report</p>
+        <p>{{ ansible_date_time.iso8601 | default('Date non disponible') }}</p>
+    </footer>
+</body>
+</html>

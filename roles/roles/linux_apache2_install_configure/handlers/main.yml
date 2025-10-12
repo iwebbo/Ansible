@@ -1,0 +1,21 @@
+---
+# roles/apache2/handlers/main.yml
+- name: restart apache
+  systemd:
+    name: "{{ apache_service_name }}"
+    state: restarted
+
+- name: reload apache
+  systemd:
+    name: "{{ apache_service_name }}"
+    state: reloaded
+
+- name: start apache
+  systemd:
+    name: "{{ apache_service_name }}"
+    state: started
+
+- name: stop apache
+  systemd:
+    name: "{{ apache_service_name }}"
+    state: stopped

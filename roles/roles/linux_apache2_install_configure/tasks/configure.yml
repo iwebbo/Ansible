@@ -1,0 +1,58 @@
+---
+# roles/apache2/tasks/configure.yml
+- name: Deploy Apache2 main configuration
+  template:
+    src: apache2.conf.j2
+    dest: "{{ apache_config_file }}"
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+  notify: restart apache
+  tags: configure
+
+- name: Enable required Apache modules
+  apache2_module:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ apache_modules }}"
+  notify: restart apache
+  when: ansible_os_family == "Debian"
+  tags: configure
+
+- name: Configure firewall for HTTP (Debian/Ubuntu)
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - '80'
+    - '443'
+  when: 
+    - ansible_os_family == "Debian"
+    - apache_configure_firewall | default(false)
+  tags: configure
+
+- name: Configure firewall for HTTP (RedHat/CentOS)
+  firewalld:
+    service: "{{ item }}"
+    permanent: yes
+    state: enabled
+    immediate: yes
+  loop:
+    - http
+    - https
+  when: 
+    - ansible_os_family == "RedHat"
+    - apache_configure_firewall | default(false)
+  tags: configure
+
+- name: Remove default site (Debian/Ubuntu)
+  file:
+    path: "{{ apache_default_site_path }}"
+    state: absent
+  when: 
+    - ansible_os_family == "Debian"
+    - apache_remove_default_site | default(true)
+  notify: reload apache
+  tags: configure

@@ -1,0 +1,99 @@
+---
+# roles/windows_iis_install_configure/defaults/main.yml
+
+# Configuration générale IIS
+iis_configure_firewall: false
+iis_remove_default_site: true
+
+# Fonctionnalités Windows à installer
+iis_features:
+  - Web-Server
+  - Web-WebServer
+  - Web-Common-Http
+  - Web-Default-Doc
+  - Web-Dir-Browsing
+  - Web-Http-Errors
+  - Web-Static-Content
+  - Web-Health
+  - Web-Http-Logging
+  - Web-Log-Libraries
+  - Web-Request-Monitor
+  - Web-Http-Tracing
+  - Web-Performance
+  - Web-Stat-Compression
+  - Web-Security
+  - Web-Filtering
+  - Web-App-Dev
+  - Web-Net-Ext45
+  - Web-Asp-Net45
+  - Web-ISAPI-Ext
+  - Web-ISAPI-Filter
+  - Web-Mgmt-Tools
+  - Web-Mgmt-Console
+  - Web-Mgmt-Service
+  - Web-Scripting-Tools
+  - NET-Framework-45-Features
+  - NET-Framework-45-Core
+  - NET-Framework-45-ASPNET
+
+# Configuration des ports
+iis_listen_port: 80
+iis_listen_port_ssl: 443
+
+# Chemin de journalisation IIS
+iis_log_dir: "C:\\inetpub\\logs\\LogFiles"
+
+# Configuration par défaut des sites IIS
+iis_sites_defaults:
+  protocol: http
+  port: 80
+  physical_path: "C:\\inetpub\\wwwroot"
+  log_format: W3C
+  log_period: Daily
+  state: present
+  default_doc: 
+    - index.html
+    - Default.htm
+    - Default.asp
+    - index.php
+    - default.aspx
+  auth:
+    anonymous: true
+    basic: false
+    windows: false
+
+# Liste des sites IIS (à définir dans les variables d'inventaire)
+iis_sites: []
+# 
+# Exemple de structure:
+# iis_sites:
+#   - name: Default Web Site
+#     state: absent
+#   - name: mywebsite
+#     protocol: http
+#     port: 80
+#     host_header: www.monsite.com
+#     physical_path: C:\inetpub\wwwroot\mywebsite
+#     log_directory: C:\inetpub\logs\LogFiles\mywebsite
+#     app_pool: mywebsite_pool
+#     state: present
+#     ssl:
+#       enabled: false
+#     limits:
+#       max_connections: 4294967295
+#       connection_timeout: 120
+#       max_bandwidth: 4294967295
+#   - name: secure-site
+#     protocol: https
+#     port: 443
+#     host_header: secure.monsite.com
+#     physical_path: C:\inetpub\wwwroot\secure
+#     app_pool: secure_pool
+#     state: present
+#     ssl:
+#       enabled: true
+#       cert_hash: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+#       store_name: "MY"
+#     auth:
+#       anonymous: false
+#       windows: true

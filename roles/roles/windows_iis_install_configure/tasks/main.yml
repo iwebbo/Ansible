@@ -1,0 +1,16 @@
+---
+# roles/windows_iis_install_configure/tasks/main.yml
+- name: Include installation tasks
+  include_tasks: install.yml
+  tags:
+    - install
+
+- name: Include configuration tasks
+  include_tasks: configure.yml
+  tags:
+    - configure
+
+- name: Include sites management tasks
+  include_tasks: sites.yml
+  tags:
+    - sites

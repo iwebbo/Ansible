@@ -1,0 +1,15 @@
+---
+# roles/security_report/tasks/file_permissions.yml
+- name: Check world-writable files
+  shell: |
+    find /etc /usr /var -type f -perm -002 2>/dev/null | head -20
+  register: world_writable_files
+  changed_when: false
+  failed_when: false
+
+- name: Check SUID/SGID files
+  shell: |
+    find /usr /bin /sbin -type f \( -perm -4000 -o -perm -2000 \) 2>/dev/null
+  register: suid_sgid_files
+  changed_when: false
+  failed_when: false

@@ -1,0 +1,35 @@
+---
+- name: Get all information systems from Ansible
+  ansible.builtin.setup:
+    gather_subset: 'all'
+
+- name: Display all informations of Systems Arch/OS
+  ansible.builtin.debug:
+    msg: "OS: {{ ansible_distribution }} {{ ansible_distribution_version }}, Architecture: {{ ansible_architecture }}"
+
+# Inclure les tâches spécifiques à chaque distribution
+- name: Installation of Docker on Debian/Ubuntu
+  ansible.builtin.include_tasks: setup-debian.yml
+  when: ansible_os_family == 'Debian'
+
+- name: Installation of Docker on RedHat/CentOS/Fedora
+  ansible.builtin.include_tasks: setup-redhat.yml
+  when: ansible_os_family == 'RedHat'
+
+- name: Installation of Docker on SUSE
+  ansible.builtin.include_tasks: setup-suse.yml
+  when: ansible_os_family == 'Suse'
+
+- name: Start & Init service docker
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: yes
+
+# Ajouter un utilisateur au groupe docker si spécifié
+- name: Add user if needed for Docker 
+  ansible.builtin.user:
+    name: "{{ docker_user }}"
+    groups: docker
+    append: yes
+  when: docker_user is defined

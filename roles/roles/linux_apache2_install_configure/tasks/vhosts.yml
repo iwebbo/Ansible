@@ -1,0 +1,106 @@
+---
+# roles/apache2/tasks/vhosts.yml
+
+# Gestion des VHosts de type "website" (contenu statique/HTML)
+- name: Create document root directories for website vhosts
+  file:
+    path: "{{ item.document_root | default('/var/www/' + item.name) }}"
+    state: directory
+    owner: "{{ apache_user }}"
+    group: "{{ apache_group }}"
+    mode: '0755'
+  loop: "{{ apache_vhosts }}"
+  when: 
+    - apache_vhosts is defined
+    - item.type | default('website') == 'website'
+  tags: vhosts
+
+- name: Create log directories for all vhosts
+  file:
+    path: "{{ apache_log_dir }}/{{ item.name }}"
+    state: directory
+    owner: "{{ apache_user }}"
+    group: "{{ apache_group }}"
+    mode: '0755'
+  loop: "{{ apache_vhosts }}"
+  when: apache_vhosts is defined
+  tags: vhosts
+
+- name: Deploy website virtual host configurations
+  template:
+    src: vhost-website.conf.j2
+    dest: "{{ apache_vhost_dir }}/{{ item.name }}.conf"
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+  loop: "{{ apache_vhosts }}"
+  when: 
+    - apache_vhosts is defined
+    - item.type | default('website') == 'website'
+  notify: reload apache
+  tags: vhosts
+
+- name: Deploy reverse proxy virtual host configurations
+  template:
+    src: vhost-proxy.conf.j2
+    dest: "{{ apache_vhost_dir }}/{{ item.name }}.conf"
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+  loop: "{{ apache_vhosts }}"
+  when: 
+    - apache_vhosts is defined
+    - item.type | default('website') == 'proxy'
+  notify: reload apache
+  tags: vhosts
+
+- name: Enable virtual hosts (Debian/Ubuntu)
+  command: a2ensite {{ item.name }}
+  loop: "{{ apache_vhosts }}"
+  when: 
+    - apache_vhosts is defined
+    - ansible_os_family == "Debian"
+    - item.state | default('enabled') == 'enabled'
+  notify: reload apache
+  register: a2ensite_result
+  changed_when: "'Enabling site' in a2ensite_result.stdout"
+  tags: vhosts
+
+- name: Disable virtual hosts (Debian/Ubuntu)
+  command: a2dissite {{ item.name }}
+  loop: "{{ apache_vhosts }}"
+  when: 
+    - apache_vhosts is defined
+    - ansible_os_family == "Debian"
+    - item.state | default('enabled') == 'disabled'
+  notify: reload apache
+  register: a2dissite_result
+  changed_when: "'Disabling site' in a2dissite_result.stdout"
+  tags: vhosts
+
+- name: Create simple index.html for website vhosts
+  template:
+    src: index.html.j2
+    dest: "{{ item.document_root | default('/var/www/' + item.name) }}/index.html"
+    owner: "{{ apache_user }}"
+    group: "{{ apache_group }}"
+    mode: '0644'
+  loop: "{{ apache_vhosts }}"
+  when: 
+    - apache_vhosts is defined
+    - item.type | default('website') == 'website'
+    - item.create_index | default(true)
+  tags: vhosts
+
+- name: Remove disabled vhost configurations
+  file:
+    path: "{{ apache_vhost_dir }}/{{ item.name }}.conf"
+    state: absent
+  loop: "{{ apache_vhosts }}"
+  when: 
+    - apache_vhosts is defined
+    - item.state | default('enabled') == 'absent'
+  notify: reload apache
+  tags: vhosts

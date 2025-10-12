@@ -1,0 +1,5 @@
+---
+- hosts: localhost
+  remote_user: root
+  roles:
+    - linux_apache2_reverse_proxy_home_assistant

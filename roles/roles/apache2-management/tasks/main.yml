@@ -1,0 +1,78 @@
+---
+- name: "Debug in case ansible_distribution doesn't exite replace by ansible_facts.facter_os.name"
+  debug:
+    var: ansible_facts
+
+- name: "Détecter le service Apache selon la distribution"
+  set_fact:
+    apache_service_name: "{{ apache_service_names[ansible_distribution] | default('apache2') }}"
+
+- name: "Afficher les informations"
+  debug:
+    msg:
+      - "Distribution: {{ ansible_distribution }}"
+      - "Service Apache: {{ apache_service_name }}"
+      - "Action demandée: {{ action_apache }}"
+
+- name: "Vérifier que l'action est autorisée"
+  fail:
+    msg: "Action '{{ action_apache }}' non supportée. Actions autorisées: {{ apache_actions_allowed | join(', ') }}"
+  when: action_apache not in apache_actions_allowed
+
+- name: "Vérifier si Apache est installé"
+  package_facts:
+    manager: auto
+
+- name: "Échouer si Apache n'est pas installé"
+  fail:
+    msg: "Apache n'est pas installé sur ce système"
+  when: >
+    apache_service_name not in ansible_facts.packages and
+    'httpd' not in ansible_facts.packages and
+    'apache2' not in ansible_facts.packages
+
+- name: "Démarrer Apache"
+  systemd:
+    name: "{{ apache_service_name }}"
+    state: started
+    enabled: yes
+  when: action_apache == 'start'
+  notify: "apache started"
+
+- name: "Arrêter Apache"
+  systemd:
+    name: "{{ apache_service_name }}"
+    state: stopped
+  when: action_apache == 'stop'
+  notify: "apache stopped"
+
+- name: "Redémarrer Apache"
+  systemd:
+    name: "{{ apache_service_name }}"
+    state: restarted
+  when: action_apache == 'restart'
+  notify: "apache restarted"
+
+- name: "Recharger Apache"
+  systemd:
+    name: "{{ apache_service_name }}"
+    state: reloaded
+  when: action_apache == 'reload'
+  notify: "apache reloaded"
+
+- name: "Obtenir le statut Apache"
+  systemd:
+    name: "{{ apache_service_name }}"
+  register: apache_status
+  when: action_apache == 'status'
+
+- name: "Afficher le statut Apache"
+  debug:
+    msg:
+      - "=== STATUT APACHE ==="
+      - "Service: {{ apache_service_name }}"
+      - "État actif: {{ apache_status.status.ActiveState | default('Inconnu') }}"
+      - "Sous-état: {{ apache_status.status.SubState | default('Inconnu') }}"
+      - "Activé au boot: {{ apache_status.status.UnitFileState | default('Inconnu') }}"
+      - "PID: {{ apache_status.status.MainPID | default('N/A') }}"
+  when: action_apache == 'status'

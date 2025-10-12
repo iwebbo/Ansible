@@ -1,0 +1,95 @@
+---
+# tasks file for linux_jenkins_install
+- name: Collecter les informations du système
+  ansible.builtin.setup:
+    gather_subset: 'all'
+
+- name: Afficher les informations du système
+  ansible.builtin.debug:
+    msg: "OS: {{ ansible_distribution }} {{ ansible_distribution_version }}, Architecture: {{ ansible_architecture }}"
+
+# Installation de Java (prérequis)
+- name: Installer Java sur Debian/Ubuntu
+  ansible.builtin.apt:
+    name: "{{ jenkins_java_package }}"
+    state: present
+    update_cache: yes
+  become: true
+  when: ansible_os_family == 'Debian'
+
+- name: Installer Java sur RedHat/CentOS/Fedora
+  ansible.builtin.yum:
+    name: "java-11-openjdk-devel"
+    state: present
+  when: ansible_os_family == 'RedHat'
+
+- name: Installer Java sur SUSE
+  ansible.builtin.zypper:
+    name: "java-11-openjdk-devel"
+    state: present
+  when: ansible_os_family == 'Suse'
+
+# Inclure les tâches spécifiques à chaque distribution
+- name: Installation de Jenkins sur Debian/Ubuntu
+  ansible.builtin.include_tasks: debian.yml
+  when: ansible_os_family == 'Debian'
+
+- name: Installation de Jenkins sur RedHat/CentOS/Fedora
+  ansible.builtin.include_tasks: redhat.yml
+  when: ansible_os_family == 'RedHat'
+
+- name: Installation de Jenkins sur SUSE
+  ansible.builtin.include_tasks: suse.yml
+  when: ansible_os_family == 'Suse'
+
+# Configuration du port Jenkins
+- name: Configurer le port HTTP de Jenkins
+  ansible.builtin.lineinfile:
+    path: /etc/default/jenkins
+    regexp: '^HTTP_PORT='
+    line: 'HTTP_PORT={{ jenkins_http_port }}'
+    state: present
+  when: ansible_os_family == 'Debian'
+  notify: restart jenkins
+
+- name: Configurer le port HTTP de Jenkins (RedHat)
+  ansible.builtin.lineinfile:
+    path: /etc/sysconfig/jenkins
+    regexp: '^JENKINS_PORT='
+    line: 'JENKINS_PORT={{ jenkins_http_port }}'
+    state: present
+  when: ansible_os_family == 'RedHat'
+  notify: restart jenkins
+
+# Démarrer et activer Jenkins
+- name: Démarrer et activer le service Jenkins
+  ansible.builtin.service:
+    name: jenkins
+    state: started
+    enabled: yes
+
+# Attendre que Jenkins soit prêt
+- name: Attendre que Jenkins soit disponible
+  ansible.builtin.uri:
+    url: "http://localhost:{{ jenkins_http_port }}/login"
+    status_code: 200
+    timeout: 5
+    return_content: yes
+  register: jenkins_service_status
+  until: jenkins_service_status.status == 200
+  retries: 12
+  delay: 5
+  changed_when: false
+  check_mode: no
+
+# Récupérer le mot de passe initial d'administration
+- name: Récupérer le mot de passe initial d'administration
+  become: true
+  ansible.builtin.command: "cat {{ jenkins_home }}/secrets/initialAdminPassword"
+  register: jenkins_admin_password
+  changed_when: false
+  check_mode: no
+
+- name: Afficher le mot de passe initial d'administration
+  ansible.builtin.debug:
+    msg: "Mot de passe initial d'administration Jenkins: {{ jenkins_admin_password.stdout }}"

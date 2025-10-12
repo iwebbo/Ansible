@@ -1,0 +1,195 @@
+---
+# roles/windows_iis_install_configure/tasks/sites.yml
+
+- name: Create site directories
+  win_file:
+    path: "{{ item.physical_path | default('C:\\inetpub\\wwwroot\\' + item.name) }}"
+    state: directory
+  loop: "{{ iis_sites }}"
+  when: 
+    - iis_sites is defined
+    - item.state | default('present') == 'present'
+  tags: sites
+
+- name: Create log directories for sites
+  win_file:
+    path: "{{ item.log_directory | default(iis_log_dir + '\\' + item.name) }}"
+    state: directory
+  loop: "{{ iis_sites }}"
+  when:
+    - iis_sites is defined
+    - item.state | default('present') == 'present'
+  tags: sites
+
+- name: Configure IIS application pools for sites
+  win_iis_webapppool:
+    name: "{{ item.app_pool | default(item.name + '_pool') }}"
+    state: present
+    attributes:
+      managedRuntimeVersion: "{{ item.managed_runtime | default('v4.0') }}"
+      managedPipelineMode: "{{ item.pipeline_mode | default('Integrated') }}"
+      processModel.identityType: "{{ item.identity_type | default('ApplicationPoolIdentity') }}"
+      processModel.idleTimeout: "{{ item.idle_timeout | default('00:20:00') }}"
+      recycling.periodicRestart.time: "{{ item.recycle_time | default('1.05:00:00') }}"
+  loop: "{{ iis_sites }}"
+  when:
+    - iis_sites is defined
+    - item.state | default('present') == 'present'
+  tags: sites
+
+- name: Configure IIS websites
+  win_iis_website:
+    name: "{{ item.name }}"
+    state: "{{ item.state | default('present') }}"
+    physical_path: "{{ item.physical_path | default('C:\\inetpub\\wwwroot\\' + item.name) }}"
+    application_pool: "{{ item.app_pool | default(item.name + '_pool') }}"
+    port: "{{ item.port | default(iis_sites_defaults.port) }}"
+    host_header: "{{ item.host_header | default('') }}"
+    ip: "{{ item.ip | default('*') }}"
+    ssl: "{{ item.ssl.enabled | default(false) if item.ssl is defined else false }}"
+  loop: "{{ iis_sites }}"
+  when: iis_sites is defined
+  register: iis_sites_result
+  tags: sites
+
+- name: Create simple index.html for sites
+  win_template:
+    src: index.html.j2
+    dest: "{{ item.physical_path | default('C:\\inetpub\\wwwroot\\' + item.name) }}\\index.html"
+  loop: "{{ iis_sites }}"
+  when:
+    - iis_sites is defined
+    - item.state | default('present') == 'present'
+    - item.create_index | default(true)
+  tags: sites
+
+- name: Configure SSL for websites
+  win_shell: |
+    Import-Module WebAdministration
+    
+    $CertHash = "{{ item.ssl.cert_hash }}"
+    $StoreName = "{{ item.ssl.store_name | default('MY') }}"
+    $SiteName = "{{ item.name }}"
+    
+    # Add SSL binding to the site
+    $Binding = Get-WebBinding -Name $SiteName -Protocol "https"
+    if (-not $Binding) {
+        New-WebBinding -Name $SiteName -IP "*" -Port 443 -Protocol "https" -HostHeader "{{ item.host_header | default('') }}"
+    }
+    
+    # Assign certificate
+    $Binding = Get-WebBinding -Name $SiteName -Protocol "https"
+    $Binding.AddSslCertificate($CertHash, $StoreName)
+  loop: "{{ iis_sites }}"
+  when:
+    - iis_sites is defined
+    - item.state | default('present') == 'present'
+    - item.ssl is defined
+    - item.ssl.enabled | default(false)
+    - item.ssl.cert_hash is defined
+  tags: sites
+
+- name: Configure authentication settings for each site
+  win_shell: |
+    Import-Module WebAdministration
+    
+    $SiteName = "{{ item.name }}"
+    
+    # Configure Anonymous Authentication
+    Set-WebConfigurationProperty -Filter "/system.webServer/security/authentication/anonymousAuthentication" -PSPath "IIS:\Sites\$SiteName" -Name "enabled" -Value {{ "true" if item.auth.anonymous | default(iis_sites_defaults.auth.anonymous) else "false" }}
+    
+    # Configure Basic Authentication
+    Set-WebConfigurationProperty -Filter "/system.webServer/security/authentication/basicAuthentication" -PSPath "IIS:\Sites\$SiteName" -Name "enabled" -Value {{ "true" if item.auth.basic | default(iis_sites_defaults.auth.basic) else "false" }}
+    
+    # Configure Windows Authentication
+    Set-WebConfigurationProperty -Filter "/system.webServer/security/authentication/windowsAuthentication" -PSPath "IIS:\Sites\$SiteName" -Name "enabled" -Value {{ "true" if item.auth.windows | default(iis_sites_defaults.auth.windows) else "false" }}
+  loop: "{{ iis_sites }}"
+  when:
+    - iis_sites is defined
+    - item.state | default('present') == 'present'
+    - item.auth is defined
+  tags: sites
+
+- name: Configure site limits and advanced settings
+  win_shell: |
+    Import-Module WebAdministration
+    
+    $SiteName = "{{ item.name }}"
+    
+    # Connection Limits
+    {% if item.limits is defined and item.limits.max_connections is defined %}
+    Set-ItemProperty "IIS:\Sites\$SiteName" -Name "limits.maxConnections" -Value {{ item.limits.max_connections }}
+    {% endif %}
+    
+    {% if item.limits is defined and item.limits.connection_timeout is defined %}
+    Set-ItemProperty "IIS:\Sites\$SiteName" -Name "limits.connectionTimeout" -Value "{{ item.limits.connection_timeout }}:00:00"
+    {% endif %}
+    
+    {% if item.limits is defined and item.limits.max_bandwidth is defined %}
+    Set-ItemProperty "IIS:\Sites\$SiteName" -Name "limits.maxBandwidth" -Value {{ item.limits.max_bandwidth }}
+    {% endif %}
+    
+    # Default Documents for this site
+    {% if item.default_doc is defined %}
+    $DefaultDocs = @({% for doc in item.default_doc %}'{{ doc }}'{% if not loop.last %}, {% endif %}{% endfor %})
+    
+    # Clear existing defaults first
+    Clear-WebConfiguration -Filter "//defaultDocument/files/*" -PSPath "IIS:\Sites\$SiteName"
+    
+    # Add new defaults
+    foreach ($doc in $DefaultDocs) {
+      Add-WebConfiguration -Filter "//defaultDocument/files" -PSPath "IIS:\Sites\$SiteName" -Value @{value="$doc"}
+    }
+    {% endif %}
+    
+    # Logging settings
+    Set-ItemProperty "IIS:\Sites\$SiteName" -Name "logFile.directory" -Value "{{ item.log_directory | default(iis_log_dir + '\\\\' + item.name) | regex_replace('\\\\', '\\\\\\\\') }}"
+    Set-ItemProperty "IIS:\Sites\$SiteName" -Name "logFile.period" -Value "{{ item.log_period | default(iis_sites_defaults.log_period) }}"
+    Set-ItemProperty "IIS:\Sites\$SiteName" -Name "logFile.logFormat" -Value "{{ item.log_format | default(iis_sites_defaults.log_format) }}"
+    
+    # Custom HTTP headers
+    {% if item.custom_headers is defined %}
+    {% for header_name, header_value in item.custom_headers.items() %}
+    $HeaderName = "{{ header_name }}"
+    $HeaderValue = "{{ header_value }}"
+    
+    # Check if header exists
+    $ExistingHeader = Get-WebConfiguration -Filter "//httpProtocol/customHeaders/add[@name='$HeaderName']" -PSPath "IIS:\Sites\$SiteName"
+    if ($ExistingHeader) {
+      # Update existing
+      Set-WebConfigurationProperty -Filter "//httpProtocol/customHeaders/add[@name='$HeaderName']" -PSPath "IIS:\Sites\$SiteName" -Name "value" -Value "$HeaderValue"
+    } else {
+      # Add new
+      Add-WebConfiguration -Filter "//httpProtocol/customHeaders" -PSPath "IIS:\Sites\$SiteName" -Value @{name="$HeaderName";value="$HeaderValue"}
+    }
+    {% endfor %}
+    {% endif %}
+  loop: "{{ iis_sites }}"
+  when:
+    - iis_sites is defined
+    - item.state | default('present') == 'present'
+  register: site_config_result
+  changed_when: site_config_result.stdout_lines | length > 0
+  tags: sites
+  
+- name: Deploy custom site configuration PowerShell script
+  win_template:
+    src: site-config.ps1.j2
+    dest: "C:\\Temp\\site-config-{{ item.name }}.ps1"
+  loop: "{{ iis_sites }}"
+  when:
+    - iis_sites is defined
+    - item.state | default('present') == 'present'
+  tags: sites
+
+- name: Execute site configuration scripts
+  win_shell: |
+    powershell.exe -ExecutionPolicy Bypass -File "C:\\Temp\\site-config-{{ item.name }}.ps1"
+  loop: "{{ iis_sites }}"
+  when:
+    - iis_sites is defined
+    - item.state | default('present') == 'present'
+  register: site_custom_config
+  changed_when: site_custom_config.stdout is not search('No changes needed')
+  notify: apply iis config
+  tags: sites

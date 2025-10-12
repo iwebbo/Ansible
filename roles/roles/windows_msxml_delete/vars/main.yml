@@ -1,0 +1,5 @@
+---
+# Var
+msxml_version: "3.0"
+msxml_remove: false
+cleanup_temp_files: true

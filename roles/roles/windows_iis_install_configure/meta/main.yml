@@ -1,0 +1,14 @@
+galaxy_info:
+  author: "A&ECoding"
+  description: "Rôle Ansible pour installer et configurer IIS sur Windows"
+  license: "MIT"
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Windows
+      versions:
+        - all
+  galaxy_tags:
+    - windows
+    - iis
+    - web
+dependencies: []

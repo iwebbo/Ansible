@@ -1,0 +1,72 @@
+---
+# tasks file for windows_rust_install
+- name: Create temp folder for installation
+  win_file:
+    path: "{{ rust_temp_download_dir }}"
+    state: directory
+
+- name: Detect arch system
+  win_shell: |
+    if ([Environment]::Is64BitOperatingSystem) {
+      Write-Output "x86_64"
+    } else {
+      Write-Output "i686"
+    }
+  register: architecture_result
+  changed_when: false
+
+- name: Set Architecture
+  set_fact:
+    rust_architecture: "{{ architecture_result.stdout | trim }}"
+
+- name: Check if RUST is already installed
+  win_stat:
+    path: "{{ rust_install_path }}\\bin\\rustc.exe"
+  register: rustc_exists
+
+- name: Set fact of Architecture
+  set_fact:
+    rust_default_host_triple: "{{ rust_architecture }}-pc-windows-msvc"
+  when: rust_default_host_triple == ""
+
+- name: Download installation of Rust (rustup-init)
+  win_get_url:
+    url: https://static.rust-lang.org/rustup/dist/{{ rust_architecture }}-pc-windows-msvc/rustup-init.exe
+    dest: "{{ rust_temp_download_dir }}\\rustup-init.exe"
+  when: not rustc_exists.stat.exists
+
+- name: Create folder of installation Path folder variable
+  win_file:
+    path: "{{ rust_install_path }}"
+    state: directory
+  when: not rustc_exists.stat.exists
+
+- name: Installation of RUST with Path folder changed
+  win_shell: |
+    $env:RUSTUP_HOME = "{{ rust_install_path }}\\rustup"
+    $env:CARGO_HOME = "{{ rust_install_path }}"
+    Start-Process -FilePath "{{ rust_temp_download_dir }}\\rustup-init.exe" -ArgumentList "-y", "--default-host", "{{ rust_default_host_triple }}", "--default-toolchain", "{{ rust_default_toolchain }}", "--profile", "{{ rust_profile }}", "--no-modify-path" -Wait -NoNewWindow
+  args:
+    creates: "{{ rust_install_path }}\\bin\\rustc.exe"
+  when: not rustc_exists.stat.exists
+
+- name: Installation of components 
+  win_shell: |
+    $env:RUSTUP_HOME = "{{ rust_install_path }}\\rustup"
+    $env:CARGO_HOME = "{{ rust_install_path }}"
+    & "{{ rust_install_path }}\\bin\\rustup.exe" component add {{ item }}
+  loop: "{{ rust_components }}"
+  when: rust_components | length > 0
+
+- name: If needed change value of Path 
+  win_path:
+    elements:
+      - "{{ rust_install_path }}\\bin"
+    scope: machine
+    state: present
+  when: rust_update_path | bool
+
+- name: Clean-up temp folder installation
+  win_file:
+    path: "{{ rust_temp_download_dir }}"
+    state: absent

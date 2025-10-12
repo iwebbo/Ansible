@@ -1,0 +1,45 @@
+---
+# tasks file for security_report
+- name: Create report directory
+  file:
+    path: "{{ report_dir }}/{{ inventory_hostname }}"
+    state: directory
+    mode: '0755'
+  delegate_to: localhost
+  run_once: false
+
+- name: Gather system information
+  setup:
+    gather_subset: all
+
+- name: Check for security updates
+  include_tasks: security_updates.yml
+  when: ansible_os_family in ['Debian', 'RedHat']
+
+- name: Scan open ports
+  include_tasks: port_scan.yml
+
+- name: Check user accounts and permissions
+  include_tasks: user_audit.yml
+
+- name: Verify SSH configuration
+  include_tasks: ssh_audit.yml
+
+- name: Check file permissions on critical directories
+  include_tasks: file_permissions.yml
+
+- name: Scan for rootkits (if rkhunter available)
+  include_tasks: rootkit_scan.yml
+  when: security_scan_rootkits | default(true)
+
+- name: Generate HTML report
+  template:
+    src: security_report.html.j2
+    dest: "{{ report_dir }}/{{ inventory_hostname }}/security_report_{{ ansible_date_time.date }}.html"
+  delegate_to: localhost
+
+- name: Generate JSON summary
+  template:
+    src: security_summary.json.j2
+    dest: "{{ report_dir }}/{{ inventory_hostname }}/security_summary_{{ ansible_date_time.date }}.json"
+  delegate_to: localhost

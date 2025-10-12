@@ -1,0 +1,52 @@
+---
+# tasks file for windows_python_install
+
+- name: Check if the specified Python version is already installed
+  win_shell: |
+    $pythonPath = Get-Command python -ErrorAction SilentlyContinue
+
+    if ($pythonPath) {
+        $version = & python --version 2>&1
+        Write-Output "Python is installed with version: $version"
+    } else {
+        Write-Output "Python is not installed"
+    }
+  register: check_python_installed
+  changed_when: false
+
+- name: Version already installed output version 
+  debug:
+    msg: "{{ check_python_installed.stdout }}"
+
+- name: Version Python need to be install
+  debug:
+    msg: "{{ python_version }}"
+
+- name: Delete existing version before ton install it ! 
+  debug:
+    msg: "Delete {{ check_python_installed.stdout }} with windows_python_delete and run again windows_python_install"
+
+- name: Download Python installer
+  win_get_url:
+    url: "{{ python_installer_url }}"
+    dest: "C:\\temp\\python-installer.exe"
+    force_basic_auth: yes
+  register: download_python
+  when:  "'Python is not installed' in check_python_installed.stdout"
+
+- name: Install Python
+  win_command: "C:\\temp\\python-installer.exe /quiet TargetDir={{ python_install_dir }} Shortcuts=0 Include_launcher=1 InstallLauncherAllUsers=1"
+  changed_when: install_python.rc == 0
+  register: install_python
+  when: download_python is not skipped and "'Python is not installed' in check_python_installed.stdout"
+
+- name: Ensure Python path is in PATH environment variable
+  win_shell: |
+    $path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine')
+    if (-not ($path -like "{{ python_install_dir }}")) {
+        $new_path = $path + ";{{ python_install_dir }};{{ python_install_dir }}\\Scripts"
+        [System.Environment]::SetEnvironmentVariable('Path', $new_path, 'Machine')
+    }
+  register: path_result
+  changed_when: path_result.stdout_lines | length > 0
+  when: install_python is not skipped

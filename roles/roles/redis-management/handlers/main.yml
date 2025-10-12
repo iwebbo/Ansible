@@ -1,0 +1,18 @@
+---
+- name: execute redis action
+  service:
+    name: "{{ redis_service_name }}"
+    state: "{{ action_redis }}"
+  listen: "execute redis action"
+
+- name: verify redis status after action
+  shell: systemctl status {{ redis_service_name }} | grep "Active:"
+  register: final_status
+  failed_when: false
+  changed_when: false
+  listen: "execute redis action"
+
+- name: display final redis status
+  debug:
+    msg: "Statut final de Redis: {{ final_status.stdout }}"
+  listen: "execute redis action"

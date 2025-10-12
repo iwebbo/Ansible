@@ -1,0 +1,107 @@
+# {{ ansible_managed }}
+# IIS Global Configuration Script
+
+Import-Module WebAdministration
+
+$changes = 0
+
+# Function to log changes
+function Log-Change {
+    param([string]$message)
+    Write-Output $message
+    $script:changes++
+}
+
+# Configure global IIS settings
+# --------------------------------------------------
+
+# Configure static compression
+$staticCompression = Get-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter "system.webServer/httpCompression/staticTypes" -name "."
+if (-not $staticCompression) {
+    Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter "system.webServer/httpCompression/staticTypes" -name "." -value @{mimeType="text/*"; enabled="true"}
+    Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter "system.webServer/httpCompression/staticTypes" -name "." -value @{mimeType="application/javascript"; enabled="true"}
+    Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter "system.webServer/httpCompression/staticTypes" -name "." -value @{mimeType="application/json"; enabled="true"}
+    Log-Change "Configured static compression"
+}
+
+# Configure dynamic compression
+$dynamicCompression = Get-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter "system.webServer/httpCompression/dynamicTypes" -name "."
+if (-not $dynamicCompression) {
+    Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter "system.webServer/httpCompression/dynamicTypes" -name "." -value @{mimeType="text/*"; enabled="true"}
+    Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter "system.webServer/httpCompression/dynamicTypes" -name "." -value @{mimeType="application/javascript"; enabled="true"}
+    Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter "system.webServer/httpCompression/dynamicTypes" -name "." -value @{mimeType="application/json"; enabled="true"}
+    Log-Change "Configured dynamic compression"
+}
+
+# Configure global logging
+$logDir = Get-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter 'system.applicationHost/sites/siteDefaults/logFile' -name 'directory'
+if ($logDir.Value -ne "{{ iis_log_dir | regex_replace('\\\\', '\\\\\\\\') }}") {
+    Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter 'system.applicationHost/sites/siteDefaults/logFile' -name 'directory' -value "{{ iis_log_dir | regex_replace('\\\\', '\\\\\\\\') }}"
+    Log-Change "Updated global log directory to {{ iis_log_dir }}"
+}
+
+# Configure default documents globally
+$defaultDocs = @('index.html', 'Default.htm', 'Default.asp', 'index.php', 'default.aspx')
+foreach ($doc in $defaultDocs) {
+    $existingDoc = Get-WebConfiguration -Filter "//defaultDocument/files/add[@value='$doc']" -PSPath "IIS:\Sites\"
+    if (-not $existingDoc) {
+        Add-WebConfiguration -Filter "//defaultDocument/files" -PSPath "IIS:\Sites\" -Value @{value="$doc"}
+        Log-Change "Added default document: $doc"
+    }
+}
+
+# Configure HTTP response headers globally
+$securityHeaders = @{
+    "X-Content-Type-Options" = "nosniff";
+    "X-Frame-Options" = "SAMEORIGIN";
+    "X-XSS-Protection" = "1; mode=block";
+    "Referrer-Policy" = "strict-origin-when-cross-origin";
+}
+
+foreach ($header in $securityHeaders.GetEnumerator()) {
+    $headerName = $header.Key
+    $headerValue = $header.Value
+    
+    $existingHeader = Get-WebConfiguration -Filter "//httpProtocol/customHeaders/add[@name='$headerName']" -PSPath "IIS:\"
+    
+    if (-not $existingHeader) {
+        Add-WebConfiguration -Filter "//httpProtocol/customHeaders" -PSPath "IIS:\" -Value @{name="$headerName";value="$headerValue"}
+        Log-Change "Added security header: $headerName = $headerValue"
+    } elseif ($existingHeader.Attributes["value"].Value -ne $headerValue) {
+        Set-WebConfigurationProperty -Filter "//httpProtocol/customHeaders/add[@name='$headerName']" -PSPath "IIS:\" -Name "value" -Value $headerValue
+        Log-Change "Updated security header: $headerName = $headerValue"
+    }
+}
+
+# Configure request filtering settings
+$maxContentLength = Get-WebConfiguration -Filter "//requestFiltering/requestLimits/@maxAllowedContentLength" -PSPath "MACHINE/WEBROOT/APPHOST"
+if ($maxContentLength.Value -ne 30000000) {
+    Set-WebConfigurationProperty -Filter "//requestFiltering/requestLimits/@maxAllowedContentLength" -PSPath "MACHINE/WEBROOT/APPHOST" -Name "Value" -Value 30000000
+    Log-Change "Set max content length to 30MB"
+}
+
+$maxUrl = Get-WebConfiguration -Filter "//requestFiltering/requestLimits/@maxUrl" -PSPath "MACHINE/WEBROOT/APPHOST"
+if ($maxUrl.Value -ne 4096) {
+    Set-WebConfigurationProperty -Filter "//requestFiltering/requestLimits/@maxUrl" -PSPath "MACHINE/WEBROOT/APPHOST" -Name "Value" -Value 4096
+    Log-Change "Set max URL length to 4096"
+}
+
+$maxQueryString = Get-WebConfiguration -Filter "//requestFiltering/requestLimits/@maxQueryString" -PSPath "MACHINE/WEBROOT/APPHOST"
+if ($maxQueryString.Value -ne 2048) {
+    Set-WebConfigurationProperty -Filter "//requestFiltering/requestLimits/@maxQueryString" -PSPath "MACHINE/WEBROOT/APPHOST" -Name "Value" -Value 2048
+    Log-Change "Set max query string length to 2048"
+}
+
+# Enable SNI (Server Name Indication) for all sites
+$sniEnabled = Get-WebConfigurationProperty -Filter "//httpProtocol/serverNameIndication" -PSPath "MACHINE/WEBROOT/APPHOST" -Name "enabled"
+if ($sniEnabled -ne $true) {
+    Set-WebConfigurationProperty -Filter "//httpProtocol/serverNameIndication" -PSPath "MACHINE/WEBROOT/APPHOST" -Name "enabled" -Value $true
+    Log-Change "Enabled SNI for all sites"
+}
+
+# Output results
+if ($changes -eq 0) {
+    Write-Output "No changes needed"
+} else {
+    Write-Output "Completed $changes changes to IIS configuration"
+}

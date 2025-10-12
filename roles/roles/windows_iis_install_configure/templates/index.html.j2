@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ item.name }} - Site Web IIS</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #0078d4 0%, #002050 100%);
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            color: #0078d4;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+        }
+        .status {
+            background: #107c10;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            display: inline-block;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #0078d4;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 0.9em;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{{ item.name }}</h1>
+        
+        <div class="status">
+            ✓ Service Actif
+        </div>
+        
+        <div class="info">
+            <h3>Informations du Service</h3>
+            <p><strong>Nom du serveur :</strong> {{ item.server_name | default(item.name) }}</p>
+{% if item.host_header is defined %}
+            <p><strong>Hôte :</strong> {{ item.host_header }}</p>
+{% endif %}
+            <p><strong>Port :</strong> {{ item.port | default(iis_sites_defaults.port) }}</p>
+            <p><strong>Répertoire :</strong> {{ item.physical_path | default('C:\\inetpub\\wwwroot\\' + item.name) }}</p>
+{% if item.app_pool is defined %}
+            <p><strong>Pool d'applications :</strong> {{ item.app_pool }}</p>
+{% endif %}
+{% if item.ssl is defined and item.ssl.enabled %}
+            <p><strong>SSL :</strong> Activé</p>
+{% endif %}
+        </div>
+        
+        <p>Ce site web est géré par Ansible et fonctionne correctement.</p>
+        
+        <div class="footer">
+            <p>Généré automatiquement le {{ ansible_date_time.date }} à {{ ansible_date_time.time }}</p>
+            <p>Serveur : {{ ansible_hostname }}</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,82 @@
+---
+# roles/apache2/defaults/main.yml
+
+# Configuration générale Apache
+apache_configure_firewall: false
+apache_remove_default_site: true
+
+# Packages selon la distribution
+apache_packages_debian:
+  - apache2
+  - apache2-utils
+
+apache_packages_redhat:
+  - httpd
+  - httpd-tools
+
+# Noms de service selon la distribution
+apache_service_name: "{{ 'apache2' if ansible_os_family == 'Debian' else 'httpd' }}"
+
+# Utilisateur et groupe Apache
+apache_user: "{{ 'www-data' if ansible_os_family == 'Debian' else 'apache' }}"
+apache_group: "{{ 'www-data' if ansible_os_family == 'Debian' else 'apache' }}"
+
+# Chemins de configuration
+apache_config_file: "{{ '/etc/apache2/apache2.conf' if ansible_os_family == 'Debian' else '/etc/httpd/conf/httpd.conf' }}"
+apache_vhost_dir: "{{ '/etc/apache2/sites-available' if ansible_os_family == 'Debian' else '/etc/httpd/conf.d' }}"
+apache_log_dir: "{{ '/var/log/apache2' if ansible_os_family == 'Debian' else '/var/log/httpd' }}"
+apache_default_site_path: "/etc/apache2/sites-enabled/000-default.conf"
+
+# Configuration des ports
+apache_listen_port: 80
+apache_listen_port_ssl: 443
+apache_vhosts_port : []
+
+# Modules Apache à activer (ajout des modules pour reverse proxy)
+apache_modules:
+  - rewrite
+  - ssl
+  - headers
+  - deflate
+  - proxy
+  - proxy_http
+  - proxy_balancer
+  - lbmethod_byrequests
+
+# Configuration par défaut des vhosts
+apache_vhosts_defaults:
+  type: website  # website ou proxy
+  port: 80
+  document_root: "/var/www/html"
+  error_log_level: warn
+  access_log_format: combined
+  create_index: true
+  state: enabled
+
+# Liste des virtual hosts (à définir dans les variables d'inventaire)
+apache_vhosts: []
+# 
+# Exemples de structure :
+# 
+# VHost de type "website" (site web classique)
+# apache_vhosts:
+#   - name: monsite.com
+#     type: website
+#     server_name: monsite.com
+#     server_alias: www.monsite.com
+#     document_root: /var/www/monsite
+#     port: 80
+#     state: enabled
+# 
+# VHost de type "proxy" (reverse proxy vers application)
+# apache_vhosts:
+#   - name: app-api
+#     type: proxy
+#     server_name: api.monentreprise.com
+#     port: 80
+#     proxy:
+#       backend_url: http://127.0.0.1:8080
+#       preserve_host: true
+#       timeout: 30
+#       retry: 3
+#     state: enabled

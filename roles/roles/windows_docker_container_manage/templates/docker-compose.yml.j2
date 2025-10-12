@@ -1,0 +1,29 @@
+services:
+{% for service in services %}
+  {{ service.service_name }}:
+    image: {{ service.image }}
+    container_name: {{ service.container_name }}
+{% if service.ports | length > 0 %}
+    ports:
+{% for port in service.ports %}
+      - "{{ port }}"
+{% endfor %}
+{% endif %}
+{% if service.environment | length > 0 %}
+    environment:
+{% for env_var in service.environment %}
+      - {{ env_var }}
+{% endfor %}
+{% endif %}
+{% if service.volumes | length > 0 %}
+    volumes:
+{% for volume in service.volumes %}
+      - {{ volume }}
+{% endfor %}
+{% endif %}
+{% if service.command %}
+    command: {{ service.command }}
+{% endif %}
+    restart: {{ service.restart_policy }}
+
+{% endfor %}

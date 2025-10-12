@@ -1,0 +1,19 @@
+---
+# roles/windows_iis_install_configure/handlers/main.yml
+- name: restart iis
+  win_service:
+    name: W3SVC
+    state: restarted
+
+- name: start iis
+  win_service:
+    name: W3SVC
+    state: started
+
+- name: stop iis
+  win_service:
+    name: W3SVC
+    state: stopped
+
+- name: apply iis config
+  win_shell: IISRESET

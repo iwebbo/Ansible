@@ -1,0 +1,19 @@
+---
+# vars file for windows_rust_install
+rust_install_path: "E:\\Tools\\build\\Rust"
+# Version (latest par défaut)
+rust_version: "latest"
+rust_components:
+  - rustfmt
+  - clippy
+  - rust-src
+  - cargo
+rust_default_host_triple: "" # Sera détecté automatiquement
+rust_default_toolchain: "stable"
+rust_profile: "default" # Value possibles: minimal, complete
+
+# Si true, change value of path
+rust_update_path: true
+rust_temp_download_dir: "{{ ansible_env.TEMP }}\\rust_installer"
+# Installation mode (interactive, unattended ou quiet)
+rust_install_mode: "quiet"

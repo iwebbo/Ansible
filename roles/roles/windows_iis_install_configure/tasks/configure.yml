@@ -1,0 +1,55 @@
+---
+# roles/windows_iis_install_configure/tasks/configure.yml
+
+- name: Configure IIS global settings
+  win_shell: |
+    Import-Module WebAdministration
+    
+    # Configure default documents
+    $DefaultDocs = @('index.html', 'Default.htm', 'Default.asp', 'index.php', 'default.aspx')
+    foreach ($doc in $DefaultDocs) {
+      if (-not (Get-WebConfiguration -Filter "//defaultDocument/files/add[@value='$doc']" -PSPath "IIS:\Sites\")) {
+        Add-WebConfiguration -Filter "//defaultDocument/files" -PSPath "IIS:\Sites\" -Value @{value="$doc"}
+      }
+    }
+    
+    # Configure global logging settings
+    Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter 'system.applicationHost/sites/siteDefaults/logFile' -name 'directory' -value '{{ iis_log_dir | regex_replace('\\\\', '\\\\\\\\') }}'
+    Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter 'system.applicationHost/sites/siteDefaults/logFile' -name 'period' -value 'Daily'
+    Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter 'system.applicationHost/sites/siteDefaults/logFile' -name 'logFormat' -value 'W3C'
+    
+    # Configure request filtering - security settings
+    Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST'  -filter "system.webServer/security/requestFiltering/requestLimits" -name "maxAllowedContentLength" -value 30000000
+    Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST'  -filter "system.webServer/security/requestFiltering/requestLimits" -name "maxUrl" -value 4096
+    Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST'  -filter "system.webServer/security/requestFiltering/requestLimits" -name "maxQueryString" -value 2048
+    
+    # Hide Server version information
+    Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST'  -filter "system.webServer/security/requestFiltering" -name "removeServerHeader" -value "True"
+    
+    # Configure response headers
+    Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter "system.webServer/httpProtocol/customHeaders" -name "." -value @{name="X-Content-Type-Options"; value="nosniff"}
+    Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' -filter "system.webServer/httpProtocol/customHeaders" -name "." -value @{name="X-XSS-Protection"; value="1; mode=block"}
+  notify: apply iis config
+  tags: configure
+
+- name: Remove default website (if configured)
+  win_iis_website:
+    name: "Default Web Site"
+    state: absent
+  when: iis_remove_default_site | default(true)
+  notify: apply iis config
+  tags: configure
+
+- name: Deploy IIS configuration PowerShell script
+  win_template:
+    src: iis_config.ps1.j2
+    dest: "C:\\Temp\\iis_config.ps1"
+  tags: configure
+
+- name: Execute IIS configuration script
+  win_shell: |
+    powershell.exe -ExecutionPolicy Bypass -File "C:\\Temp\\iis_config.ps1"
+  register: iis_config_result
+  changed_when: iis_config_result.stdout is not search('No changes needed')
+  notify: apply iis config
+  tags: configure

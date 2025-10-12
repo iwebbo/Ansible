@@ -1,0 +1,13 @@
+galaxy_info:
+  author: "A&ECoding"
+  description: "Rôle Ansible to install .NET Runtimes on windows"
+  license: "MIT"
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Windows
+      versions:
+        - all
+  galaxy_tags:
+    - windows
+    - -e dotnet_version="8.0" -e runtime_version="8.0.1"
+dependencies: []

@@ -1,0 +1,139 @@
+# {{ ansible_managed }}
+# Virtual Host Reverse Proxy: {{ item.name }}
+
+<VirtualHost *:{{ item.port | default(apache_vhosts_defaults.port) }}>
+    ServerName {{ item.server_name | default(item.name) }}
+{% if item.server_alias is defined %}
+    ServerAlias {{ item.server_alias }}
+{% endif %}
+    
+    # Logs
+    ErrorLog {{ apache_log_dir }}/{{ item.name }}/error.log
+    CustomLog {{ apache_log_dir }}/{{ item.name }}/access.log {{ item.access_log_format | default(apache_vhosts_defaults.access_log_format) }}
+    LogLevel {{ item.error_log_level | default(apache_vhosts_defaults.error_log_level) }}
+    
+    # Proxy Configuration
+    ProxyPreserveHost {{ item.proxy.preserve_host | default('On') }}
+    ProxyRequests Off
+    
+    # Timeout Configuration
+    ProxyTimeout {{ item.proxy.timeout | default(30) }}
+    ProxyBadHeader {{ item.proxy.bad_header | default('Ignore') }}
+    
+    # Health Check (optionnel)
+{% if item.proxy.health_check is defined %}
+    ProxySet hcmethod GET
+    ProxySet hcuri {{ item.proxy.health_check.uri | default('/health') }}
+{% endif %}
+    
+    # Load Balancing (si plusieurs backends)
+{% if item.proxy.backends is defined and item.proxy.backends | length > 1 %}
+    ProxyBalancerMember {{ item.proxy.backend_url | default('http://127.0.0.1:8080') }}
+    <Proxy "balancer://{{ item.name }}-cluster">
+{% for backend in item.proxy.backends %}
+        BalancerMember {{ backend.url }}{% if backend.status is defined %} status={{ backend.status }}{% endif %}{% if backend.weight is defined %} loadfactor={{ backend.weight }}{% endif %}
+
+{% endfor %}
+        ProxySet lbmethod={{ item.proxy.lb_method | default('byrequests') }}
+{% if item.proxy.health_check is defined %}
+        ProxySet hcmethod {{ item.proxy.health_check.method | default('GET') }}
+        ProxySet hcuri {{ item.proxy.health_check.uri | default('/health') }}
+        ProxySet hcinterval {{ item.proxy.health_check.interval | default(30) }}
+{% endif %}
+    </Proxy>
+    
+    # Proxy vers le cluster
+    ProxyPass / balancer://{{ item.name }}-cluster/{{ item.proxy.path | default('') }}
+    ProxyPassReverse / balancer://{{ item.name }}-cluster/{{ item.proxy.path | default('') }}
+    
+    # Interface de gestion du load balancer
+    <Location "/balancer-manager">
+        SetHandler balancer-manager
+        Require ip 127.0.0.1
+{% if item.proxy.admin_ips is defined %}
+{% for ip in item.proxy.admin_ips %}
+        Require ip {{ ip }}
+{% endfor %}
+{% endif %}
+    </Location>
+    ProxyPass /balancer-manager !
+    
+{% else %}
+    # Proxy vers un seul backend
+    ProxyPass {{ item.proxy.location | default('/') }} {{ item.proxy.backend_url | default('http://127.0.0.1:8080') }}{{ item.proxy.path | default('') }}
+    ProxyPassReverse {{ item.proxy.location | default('/') }} {{ item.proxy.backend_url | default('http://127.0.0.1:8080') }}{{ item.proxy.path | default('') }}
+{% endif %}
+    
+    # Headers de sécurité et informations client
+    ProxyAddHeaders On
+    Header add X-Forwarded-Proto "{% if item.ssl is defined and item.ssl.enabled | default(false) %}https{% else %}http{% endif %}"
+    Header add X-Forwarded-Port "{{ item.port | default(apache_vhosts_defaults.port) }}"
+    
+{% if item.proxy.additional_headers is defined %}
+    # Headers personnalisés
+{% for header_name, header_value in item.proxy.additional_headers.items() %}
+    Header add {{ header_name }} "{{ header_value }}"
+{% endfor %}
+{% endif %}
+    
+    # Gestion des erreurs de proxy
+{% if item.proxy.error_handling is defined %}
+    ProxyErrorOverride {{ item.proxy.error_handling.override | default('Off') }}
+{% if item.proxy.error_handling.custom_pages is defined %}
+{% for error_code, error_page in item.proxy.error_handling.custom_pages.items() %}
+    ErrorDocument {{ error_code }} {{ error_page }}
+{% endfor %}
+{% endif %}
+{% endif %}
+    
+    # Retry et failover
+    ProxyPass / {{ item.proxy.backend_url | default('http://127.0.0.1:8080') }}{{ item.proxy.path | default('') }} retry={{ item.proxy.retry | default(3) }}
+    
+    # Configuration SSL pour le backend (si nécessaire)
+{% if item.proxy.backend_ssl is defined and item.proxy.backend_ssl.enabled | default(false) %}
+    SSLProxyEngine On
+{% if item.proxy.backend_ssl.verify | default(true) %}
+    SSLProxyVerify require
+    SSLProxyVerifyDepth {{ item.proxy.backend_ssl.verify_depth | default(1) }}
+{% else %}
+    SSLProxyVerify none
+{% endif %}
+{% if item.proxy.backend_ssl.ca_cert is defined %}
+    SSLProxyCACertificateFile {{ item.proxy.backend_ssl.ca_cert }}
+{% endif %}
+{% endif %}
+    
+{% if item.ssl is defined and item.ssl.enabled | default(false) %}
+    # SSL Configuration pour le frontend
+    SSLEngine on
+    SSLCertificateFile {{ item.ssl.certificate | default('/etc/ssl/certs/ssl-cert-snakeoil.pem') }}
+    SSLCertificateKeyFile {{ item.ssl.certificate_key | default('/etc/ssl/private/ssl-cert-snakeoil.key') }}
+{% if item.ssl.certificate_chain is defined %}
+    SSLCertificateChainFile {{ item.ssl.certificate_chain }}
+{% endif %}
+    
+    # SSL Security
+    SSLProtocol all -SSLv2 -SSLv3
+    SSLCipherSuite ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305
+    SSLHonorCipherOrder on
+{% endif %}
+    
+{% if item.custom_directives is defined %}
+    # Custom Directives
+    {{ item.custom_directives | indent(4) }}
+{% endif %}
+</VirtualHost>
+
+{% if item.redirect_to_ssl is defined and item.redirect_to_ssl %}
+# HTTP to HTTPS redirect pour reverse proxy
+<VirtualHost *:80>
+    ServerName {{ item.server_name | default(item.name) }}
+{% if item.server_alias is defined %}
+    ServerAlias {{ item.server_alias }}
+{% endif %}
+    
+    RewriteEngine On
+    RewriteCond %{HTTPS} off
+    RewriteRule ^(.*)$ https://{{ item.server_name | default(item.name) }}$1 [R=301,L]
+</VirtualHost>
+{% endif %}

@@ -1,0 +1,53 @@
+---
+# roles/windows_iis_install_configure/tasks/install.yml
+
+- name: Install IIS features
+  win_feature:
+    name: "{{ iis_features }}"
+    state: present
+    include_management_tools: yes
+  register: iis_install
+  tags: install
+
+- name: Reboot if needed after feature installation
+  win_reboot:
+    test_command: 'exit 0'
+  when: iis_install.reboot_required
+  tags: install
+
+- name: Ensure IIS service is started and configured for automatic startup
+  win_service:
+    name: W3SVC
+    state: started
+    start_mode: auto
+  tags: install
+
+- name: Configure Windows Firewall for HTTP (if enabled)
+  win_firewall_rule:
+    name: "IIS - HTTP (TCP-In)"
+    localport: 80
+    action: allow
+    direction: in
+    protocol: tcp
+    state: present
+    enabled: yes
+  when: iis_configure_firewall | default(false)
+  tags: install
+
+- name: Configure Windows Firewall for HTTPS (if enabled)
+  win_firewall_rule:
+    name: "IIS - HTTPS (TCP-In)"
+    localport: 443
+    action: allow
+    direction: in
+    protocol: tcp
+    state: present
+    enabled: yes
+  when: iis_configure_firewall | default(false)
+  tags: install
+
+- name: Create IIS log directories
+  win_file:
+    path: "{{ iis_log_dir }}"
+    state: directory
+  tags: install

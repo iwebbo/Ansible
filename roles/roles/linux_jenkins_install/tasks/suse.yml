@@ -1,0 +1,31 @@
+---
+# Installation pour SUSE selon la documentation officielle
+# https://www.jenkins.io/doc/book/installing/linux/#opensuse
+
+- name: Ajouter le repository Jenkins
+  ansible.builtin.zypper_repository:
+    name: jenkins
+    repo: https://pkg.jenkins.io/opensuse-stable/
+    auto_import_keys: yes
+    state: present
+
+- name: Installer Jenkins
+  ansible.builtin.zypper:
+    name: jenkins
+    state: present
+  notify: restart jenkins
+
+- name: Configurer le pare-feu (si firewalld est utilisé)
+  ansible.builtin.firewalld:
+    port: "{{ jenkins_http_port }}/tcp"
+    permanent: yes
+    state: enabled
+  when: ansible_service_mgr == 'systemd'
+  ignore_errors: yes
+
+- name: Recharger le pare-feu
+  ansible.builtin.service:
+    name: firewalld
+    state: reloaded
+  when: ansible_service_mgr == 'systemd'
+  ignore_errors: yes

@@ -1,0 +1,98 @@
+# {{ ansible_managed }}
+# Apache2 Main Configuration
+
+# Server Root
+{% if ansible_os_family == "Debian" %}
+ServerRoot /etc/apache2
+{% else %}
+ServerRoot /etc/httpd
+{% endif %}
+
+# PID File
+{% if ansible_os_family == "Debian" %}
+PidFile ${APACHE_PID_FILE}
+{% else %}
+PidFile /var/run/httpd/httpd.pid
+{% endif %}
+
+# Timeout and KeepAlive
+Timeout 300
+KeepAlive On
+MaxKeepAliveRequests 100
+KeepAliveTimeout 5
+
+# User and Group
+User {{ apache_user }}
+Group {{ apache_group }}
+
+# Listen
+Listen {{ apache_listen_port }}
+Listen {{ apache_vhosts_port }}
+{% if apache_listen_port_ssl is defined %}
+Listen {{ apache_listen_port_ssl }}
+{% endif %}
+
+# Modules
+{% if ansible_os_family == "Debian" %}
+Include /etc/apache2/mods-enabled/*.load
+Include /etc/apache2/mods-enabled/*.conf
+{% else %}
+LoadModule dir_module modules/mod_dir.so
+LoadModule mime_module modules/mod_mime.so
+LoadModule rewrite_module modules/mod_rewrite.so
+LoadModule ssl_module modules/mod_ssl.so
+{% endif %}
+
+# Directory Access Control
+<Directory />
+    Options FollowSymLinks
+    AllowOverride None
+    Require all denied
+</Directory>
+
+<Directory /var/www/>
+    Options Indexes FollowSymLinks
+    AllowOverride All
+    Require all granted
+</Directory>
+
+# DirectoryIndex
+DirectoryIndex index.html index.htm index.php
+
+# File Types
+<Files ".ht*">
+    Require all denied
+</Files>
+
+# Logging
+LogFormat "%v:%p %h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\"" vhost_combined
+LogFormat "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\"" combined
+LogFormat "%h %l %u %t \"%r\" %>s %O" common
+LogFormat "%{Referer}i -> %U" referer
+LogFormat "%{User-agent}i" agent
+
+# Error Log
+{% if ansible_os_family == "Debian" %}
+ErrorLog ${APACHE_LOG_DIR}/error.log
+LogLevel warn
+{% else %}
+ErrorLog /var/log/httpd/error_log
+LogLevel warn
+{% endif %}
+
+# Include Virtual Hosts
+{% if ansible_os_family == "Debian" %}
+IncludeOptional /etc/apache2/conf-enabled/*.conf
+IncludeOptional /etc/apache2/sites-enabled/*.conf
+{% else %}
+IncludeOptional /etc/httpd/conf.d/*.conf
+{% endif %}
+
+# Security Headers
+Header always set X-Content-Type-Options nosniff
+Header always set X-Frame-Options DENY
+Header always set X-XSS-Protection "1; mode=block"
+
+# Hide Apache Version
+ServerTokens Prod
+ServerSignature Off

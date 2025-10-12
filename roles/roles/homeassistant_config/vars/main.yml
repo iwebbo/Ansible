@@ -1,0 +1,20 @@
+---
+ha_config_path: "/homeassistant"  # Chemin standard Home Assistant OS
+ha_host: "{{ inventory_hostname }}"  # IP du serveur HA
+ha_port: 8123
+
+# === COMPORTEMENT DU RÔLE ===
+ha_backup_enabled: true
+ha_cleanup_old_backups: true  # Active le nettoyage des anciens backups
+ha_wait_after_restart: true
+ha_verify_health: true
+ha_restart_delay: 30
+ha_restart_timeout: 300
+
+# === FICHIERS YAML PAR DÉFAUT ===
+ha_yaml_files:
+  - "configuration.yaml"
+  - "automations.yaml"
+  - "scripts.yaml"
+  - "scenes.yaml"
+  - "switchs.yaml"

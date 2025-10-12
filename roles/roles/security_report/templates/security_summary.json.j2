@@ -1,0 +1,43 @@
+{
+  "server": "{{ inventory_hostname }}",
+  "scan_date": "{{ ansible_date_time.iso8601 }}",
+  "os": "{{ ansible_distribution }} {{ ansible_distribution_version }}",
+  "summary": {
+    "security_updates": {{ debian_security_updates.stdout|default(redhat_security_updates.stdout)|default(0) }},
+    "root_users": {{ root_users.stdout_lines|length }},
+    "no_password_users": {{ no_password_users.stdout_lines|length }},
+    "world_writable_files": {{ world_writable_files.stdout_lines|length }},
+    "listening_ports": {{ listening_ports.stdout_lines|length }},
+    "vulnerable_services": {% if vulnerable_ports.stdout == "None found" %}0{% else %}{{ vulnerable_ports.stdout_lines|length }}{% endif %}
+  },
+  "risk_level": "{% if (debian_security_updates.stdout|default(0)|int > 10) or (no_password_users.stdout_lines|length > 0) or (vulnerable_ports.stdout != 'None found') %}CRITICAL{% elif (debian_security_updates.stdout|default(0)|int > 0) or (root_users.stdout_lines|length > 1) or (world_writable_files.stdout_lines|length > 5) %}HIGH{% elif world_writable_files.stdout_lines|length > 0 %}MEDIUM{% else %}LOW{% endif %}",
+  "recommendations": [
+    {% if ansible_os_family == "Debian" and debian_security_updates.stdout|int > 0 %}
+    "Apply {{ debian_security_updates.stdout }} security updates",
+    {% endif %}
+    {% if root_users.stdout_lines|length > 1 %}
+    "Review users with root privileges",
+    {% endif %}
+    {% if no_password_users.stdout_lines|length > 0 %}
+    "Configure passwords for all user accounts",
+    {% endif %}
+    {% if vulnerable_ports.stdout != "None found" %}
+    "Secure or close vulnerable services",
+    {% endif %}
+    {% if world_writable_files.stdout_lines|length > 0 %}
+    "Fix world-writable file permissions",
+    {% endif %}
+    "Schedule regular security scans"
+  ],
+  "details": {
+    "security_updates_list": "{{ (debian_security_list.stdout|default(redhat_security_list.stdout))|default('') | regex_replace('\n', '\\n') }}",
+    "listening_ports": "{{ listening_ports.stdout | regex_replace('\n', '\\n') }}",
+    "root_users": {{ root_users.stdout_lines | to_json }},
+    {% if no_password_users.stdout_lines|length > 0 %}
+    "no_password_users": {{ no_password_users.stdout_lines | to_json }},
+    {% endif %}
+    {% if world_writable_files.stdout_lines|length > 0 %}
+    "world_writable_files": {{ world_writable_files.stdout_lines[:10] | to_json }}
+    {% endif %}
+  }
+}

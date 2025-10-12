@@ -1,0 +1,10 @@
+---
+- name: "Restart - Arrêt"
+  include_tasks: stop.yml
+
+- name: "Restart - Pause"
+  pause:
+    seconds: 5
+
+- name: "Restart - Démarrage"
+  include_tasks: start.yml

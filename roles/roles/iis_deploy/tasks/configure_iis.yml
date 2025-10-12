@@ -1,0 +1,83 @@
+---
+- name: "Vérifier si le pool d'applications existe"
+  win_shell: |
+    Import-Module WebAdministration
+    Test-Path "IIS:\AppPools\{{ iis_deploy_app_pool_name }}"
+  register: app_pool_exists
+  changed_when: false
+
+- name: "Créer le pool d'applications"
+  win_shell: |
+    Import-Module WebAdministration
+    New-WebAppPool -Name "{{ iis_deploy_app_pool_name }}"
+    Set-ItemProperty -Path "IIS:\AppPools\{{ iis_deploy_app_pool_name }}" -Name managedRuntimeVersion -Value "{{ iis_deploy_dotnet_version }}"
+    Set-ItemProperty -Path "IIS:\AppPools\{{ iis_deploy_app_pool_name }}" -Name enable32BitAppOnWin64 -Value ${{ iis_deploy_enable_32bit | lower }}
+    Set-ItemProperty -Path "IIS:\AppPools\{{ iis_deploy_app_pool_name }}" -Name managedPipelineMode -Value "{{ iis_deploy_managed_pipeline_mode }}"
+    Set-ItemProperty -Path "IIS:\AppPools\{{ iis_deploy_app_pool_name }}" -Name processModel.idleTimeout -Value "{{ iis_deploy_idle_timeout_minutes }}"
+    Set-ItemProperty -Path "IIS:\AppPools\{{ iis_deploy_app_pool_name }}" -Name processModel.maxProcesses -Value "{{ iis_deploy_max_processes }}"
+    
+    # Configurer l'identité du pool
+    {% raw %}
+    if ("{{ iis_deploy_identity_type }}" -eq "SpecificUser") {
+        $appPool = Get-Item "IIS:\AppPools\{{ iis_deploy_app_pool_name }}" 
+        $appPool.processModel.identityType = "SpecificUser"
+        $appPool.processModel.userName = "{{ iis_deploy_username }}"
+        $appPool.processModel.password = "{{ iis_deploy_password }}"
+        $appPool | Set-Item
+    } else {
+        Set-ItemProperty -Path "IIS:\AppPools\{{ iis_deploy_app_pool_name }}" -Name processModel.identityType -Value "{{ iis_deploy_identity_type }}"
+    }
+    {% endraw %}
+  when: app_pool_exists.stdout | trim == "False"
+
+- name: "Vérifier si le répertoire physique existe"
+  win_stat:
+    path: "{{ iis_deploy_physical_path }}"
+  register: physical_path_check
+
+- name: "Créer le répertoire physique si nécessaire"
+  win_file:
+    path: "{{ iis_deploy_physical_path }}"
+    state: directory
+  when: not physical_path_check.stat.exists
+
+- name: "Vérifier si l'application existe"
+  win_shell: |
+    Import-Module WebAdministration
+    Test-Path "IIS:\Sites\{{ iis_deploy_site_name }}\{{ iis_deploy_app_path }}"
+  register: app_exists
+  changed_when: false
+  failed_when: false
+
+- name: "Vérifier si le site Web existe"
+  win_shell: |
+    Import-Module WebAdministration
+    Test-Path "IIS:\Sites\{{ iis_deploy_site_name }}"
+  register: site_exists
+  changed_when: false
+
+- name: "Créer le site Web si nécessaire"
+  win_shell: |
+    Import-Module WebAdministration
+    New-Website -Name "{{ iis_deploy_site_name }}" -PhysicalPath "{{ iis_deploy_physical_path }}" -ApplicationPool "{{ iis_deploy_app_pool_name }}" -Port {{ iis_deploy_port }} -HostHeader ""
+  when: site_exists.stdout | trim == "False"
+
+- name: "Ajouter des liaisons supplémentaires si nécessaire"
+  win_shell: |
+    Import-Module WebAdministration
+    New-WebBinding -Name "{{ iis_deploy_site_name }}" -Protocol "{{ item.protocol }}" -BindingInformation "{{ item.binding_information }}" -SslFlags {{ item.ssl_flags }}
+  loop: "{{ iis_deploy_site_bindings }}"
+  when: site_exists.stdout | trim == "True"
+
+- name: "Créer l'application Web si elle n'existe pas"
+  win_shell: |
+    Import-Module WebAdministration
+    New-WebApplication -Name "{{ iis_deploy_app_name }}" -Site "{{ iis_deploy_site_name }}" -PhysicalPath "{{ iis_deploy_physical_path }}" -ApplicationPool "{{ iis_deploy_app_pool_name }}"
+  when: app_exists.stdout | trim == "False" and iis_deploy_app_path != "/"
+
+- name: "Configurer l'application Web existante"
+  win_shell: |
+    Import-Module WebAdministration
+    Set-ItemProperty "IIS:\Sites\{{ iis_deploy_site_name }}\{{ iis_deploy_app_path }}" -Name physicalPath -Value "{{ iis_deploy_physical_path }}"
+    Set-ItemProperty "IIS:\Sites\{{ iis_deploy_site_name }}\{{ iis_deploy_app_path }}" -Name applicationPool -Value "{{ iis_deploy_app_pool_name }}"
+  when: app_exists.stdout | trim == "True" and iis_deploy_app_path != "/"

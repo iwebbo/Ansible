@@ -1,0 +1,61 @@
+---
+# tasks file for docker_build_project
+- name: "Validation - Vérifier le chemin du projet"
+  fail:
+    msg: "Le paramètre 'project_path' est obligatoire"
+  when: project_path == ""
+
+- name: "Info - Affichage de l'action"
+  debug:
+    msg: "Action {{ docker_action }} sur {{ project_name }} dans {{ project_path }}"
+
+- name: "Vérification - Le répertoire existe (Windows)"
+  win_stat:
+    path: "{{ project_path }}"
+  register: dir_check_windows
+  when: ansible_os_family == "Windows"
+
+- name: "Vérification - Le répertoire existe (Linux)"
+  stat:
+    path: "{{ project_path }}"
+  register: dir_check_linux
+  when: ansible_os_family != "Windows"
+
+- name: "Échec si répertoire inexistant (Windows)"
+  fail:
+    msg: "Le répertoire {{ project_path }} n'existe pas"
+  when: 
+    - ansible_os_family == "Windows"
+    - not dir_check_windows.stat.exists
+
+- name: "Échec si répertoire inexistant (Linux)"
+  fail:
+    msg: "Le répertoire {{ project_path }} n'existe pas"
+  when: 
+    - ansible_os_family != "Windows"
+    - not dir_check_linux.stat.exists
+
+# Actions conditionnelles
+- name: "Action BUILD"
+  include_tasks: build.yml
+  when: docker_action == "build"
+
+- name: "Action START"
+  include_tasks: start.yml
+  when: docker_action == "start"
+
+- name: "Action STOP"
+  include_tasks: stop.yml
+  when: docker_action == "stop"
+
+- name: "Action DOWN"
+  include_tasks: down.yml
+  when: docker_action == "down"
+
+- name: "Action RESTART"
+  include_tasks: restart.yml
+  when: docker_action == "restart"
+
+- name: "Action STATUS"
+  include_tasks: status.yml
+  when: docker_action == "status"
