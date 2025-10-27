@@ -1,0 +1,27 @@
+---
+# meta/main.yml - Métadonnées pour le rôle Keycloak
+
+galaxy_info:
+  role_name: keycloak
+  author: A&ECoding
+  description: Installation et configuration de Keycloak en mode standalone
+  license: MIT
+  min_ansible_version: 2.9
+  
+  platforms:
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+  
+  galaxy_tags:
+    - keycloak
+    - sso
+    - authentication
+    - identity
+    - security
+    - oauth
+    - oidc
+    - saml
+
+dependencies: []

@@ -1,0 +1,25 @@
+---
+# handlers/main.yml - Handlers pour le rôle Keycloak
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+  listen: Reload systemd
+
+- name: Restart Keycloak service
+  systemd:
+    name: keycloak
+    state: restarted
+  listen: Restart Keycloak service
+
+- name: Stop Keycloak service
+  systemd:
+    name: keycloak
+    state: stopped
+  listen: Stop Keycloak service
+
+- name: Start Keycloak service
+  systemd:
+    name: keycloak
+    state: started
+  listen: Start Keycloak service

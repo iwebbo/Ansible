@@ -1,0 +1,77 @@
+---
+# tasks/configure.yml - Tâches de configuration de Keycloak
+
+- name: Create configuration directories
+  file:
+    path: "/opt/keycloak/{{ item }}"
+    state: directory
+    owner: keycloak
+    group: keycloak
+    mode: '0750'
+  loop:
+    - "conf"
+    - "data"
+    - "logs"
+  tags:
+    - configure
+    - directories
+
+- name: Generate initial Keycloak configuration
+  template:
+    src: keycloak.conf.j2
+    dest: /opt/keycloak/conf/keycloak.conf
+    owner: keycloak
+    group: keycloak
+    mode: '0640'
+  notify: Restart Keycloak service
+  tags:
+    - configure
+    - config
+
+- name: Create admin user script
+  template:
+    src: create-admin-user.cli.j2
+    dest: /opt/keycloak/bin/create-admin-user.cli
+    owner: keycloak
+    group: keycloak
+    mode: '0750'
+  tags:
+    - configure
+    - admin
+
+- name: Create admin user if not exists
+  command: >
+    /opt/keycloak/bin/kc.sh build
+  become: yes
+  become_user: keycloak
+  args:
+    chdir: /opt/keycloak
+    creates: /opt/keycloak/data/.admin-created
+  tags:
+    - configure
+    - admin
+    - build
+
+- name: Mark admin user as created
+  file:
+    path: /opt/keycloak/data/.admin-created
+    state: touch
+    owner: keycloak
+    group: keycloak
+    mode: '0640'
+  tags:
+    - configure
+    - admin
+
+- name: Configure firewall rules
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - 8080   # HTTP (Development)
+    - 8443   # HTTPS (Production)
+  when: keycloak_configure_firewall | default(true)
+  tags:
+    - configure
+    - firewall

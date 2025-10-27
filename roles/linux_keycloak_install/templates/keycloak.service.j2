@@ -1,0 +1,26 @@
+[Unit]
+Description=Keycloak Server
+After=network.target
+
+[Service]
+Type=simple
+User=keycloak
+Group=keycloak
+WorkingDirectory=/opt/keycloak
+ExecStart=/opt/keycloak/bin/kc.sh {{ keycloak_launch_mode | default('start-dev') }} {% for option in keycloak_launch_options | default([]) %}{{ option }} {% endfor %}
+
+Environment="JAVA_OPTS=-Xms{{ keycloak_java_min_memory | default('512m') }} -Xmx{{ keycloak_java_max_memory | default('1g') }}"
+TimeoutStartSec=180
+TimeoutStopSec=60
+Restart=on-failure
+RestartSec=30
+SuccessExitStatus=0
+
+# Hardening options
+ProtectHome=true
+ProtectSystem=strict
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

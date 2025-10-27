@@ -1,0 +1,45 @@
+---
+# defaults/main.yml - Variables par défaut pour le rôle Keycloak
+
+# Version Keycloak
+keycloak_version: "26.3.2"
+
+# Configuration Java
+keycloak_java_min_memory: "512m"
+keycloak_java_max_memory: "1g"
+
+# Configuration du serveur
+keycloak_hostname: "{{ ansible_fqdn }}"
+keycloak_http_port: 8080
+keycloak_https_port: 8443
+
+# Mode de lancement
+keycloak_launch_mode: "start-dev"  # 'start-dev' pour le développement, 'start' pour la production
+keycloak_launch_options: []
+
+# Options de base de données
+keycloak_db_type: "h2"  # 'h2' (dev only) ou 'postgresql' (recommandé pour prod)
+keycloak_db_host: "localhost"
+keycloak_db_port: 5432
+keycloak_db_name: "keycloak"
+keycloak_db_username: "keycloak"
+keycloak_db_password: "change_me"  # À remplacer par vault_keycloak_db_password
+
+# Configuration de logs
+keycloak_log_level: "INFO"
+
+# Proxy
+keycloak_behind_proxy: false
+
+# Firewall
+keycloak_configure_firewall: true
+
+# Admin user
+keycloak_admin_user: "admin"
+keycloak_admin_password: "change_me"  # À remplacer par vault_keycloak_admin_password
+
+# Cache mode
+keycloak_cache_mode: "local"  # 'local' (standalone) ou 'distributed' (cluster)
+
+# Propriétés additionnelles
+keycloak_additional_properties: {}

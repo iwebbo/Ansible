@@ -1,0 +1,21 @@
+---
+# tasks/main.yml - Tâches principales pour le rôle Keycloak
+
+# Inclusion des tâches par fonctionnalité avec tags
+- name: Import installation tasks
+  import_tasks: install.yml
+  tags:
+    - keycloak
+    - install
+
+- name: Import configuration tasks
+  import_tasks: configure.yml
+  tags:
+    - keycloak
+    - configure
+
+- name: Import service management tasks
+  import_tasks: service.yml
+  tags:
+    - keycloak
+    - service
