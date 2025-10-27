@@ -14,8 +14,9 @@ keycloak_http_port: 8080
 keycloak_https_port: 8443
 
 # Mode de lancement
-keycloak_launch_mode: "start-dev"  # 'start-dev' pour le développement, 'start' pour la production
+keycloak_launch_mode: "start"  # 'start-dev' pour le développement, 'start' pour la production
 keycloak_launch_options: []
+# Option exemple --hostname localhost
 
 # Options de base de données
 keycloak_db_type: "h2"  # 'h2' (dev only) ou 'postgresql' (recommandé pour prod)

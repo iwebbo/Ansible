@@ -43,7 +43,7 @@
   command: >
     /opt/keycloak/bin/kc.sh build
   become: yes
-  become_user: keycloak
+  #become_user: keycloak
   args:
     chdir: /opt/keycloak
     creates: /opt/keycloak/data/.admin-created
@@ -63,15 +63,15 @@
     - configure
     - admin
 
-- name: Configure firewall rules
-  ufw:
-    rule: allow
-    port: "{{ item }}"
-    proto: tcp
-  loop:
-    - 8080   # HTTP (Development)
-    - 8443   # HTTPS (Production)
-  when: keycloak_configure_firewall | default(true)
-  tags:
-    - configure
-    - firewall
+# - name: Configure firewall rules
+#   ufw:
+#     rule: allow
+#     port: "{{ item }}"
+#     proto: tcp
+#   loop:
+#     - 8080   # HTTP (Development)
+#     - 8443   # HTTPS (Production)
+#   when: keycloak_configure_firewall | default(true)
+#   tags:
+#     - configure
+#     - firewall

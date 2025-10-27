@@ -1,6 +1,14 @@
 ---
 # tasks/service.yml - Tâches de gestion du service Keycloak
 
+- name: Create Keycloak init script
+  template:
+    src: keycloak-init.sh.j2
+    dest: /opt/keycloak/bin/keycloak-init.sh
+    owner: keycloak
+    group: keycloak
+    mode: '0750'
+
 - name: Install Keycloak systemd service
   template:
     src: keycloak.service.j2
@@ -12,6 +20,38 @@
   tags:
     - service
     - systemd
+
+# Pre-build Keycloak avant de démarrer le service
+- name: Build Keycloak before starting service
+  command: /opt/keycloak/bin/kc.sh build
+  become: yes
+  args:
+    chdir: /opt/keycloak
+  register: build_result
+  changed_when: build_result.rc == 0
+  failed_when: false  # Ne pas échouer même si la commande échoue
+  tags:
+    - configure
+    - build
+    - service
+
+- name: Display build result
+  debug:
+    var: build_result.stdout_lines
+  when: build_result.stdout_lines is defined
+  tags:
+    - configure
+    - build
+    - service
+
+- name: Display build errors if any
+  debug:
+    var: build_result.stderr_lines
+  when: build_result.stderr_lines is defined
+  tags:
+    - configure
+    - build
+    - service
 
 - name: Ensure Keycloak service is enabled
   systemd:
@@ -47,11 +87,11 @@
     url: "http://localhost:8080/health"
     return_content: yes
     status_code: 200
-    timeout: 30
+    timeout: 20
   register: keycloak_health
   until: keycloak_health is succeeded
-  retries: 5
-  delay: 10
+  retries: 10
+  delay: 50
   tags:
     - service
     - verify

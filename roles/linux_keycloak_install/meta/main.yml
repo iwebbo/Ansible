@@ -3,7 +3,7 @@
 
 galaxy_info:
   role_name: keycloak
-  author: A&ECoding
+  author: Claude
   description: Installation et configuration de Keycloak en mode standalone
   license: MIT
   min_ansible_version: 2.9

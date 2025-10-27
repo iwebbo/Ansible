@@ -1,0 +1,37 @@
+# Configuration file for Keycloak
+# See https://www.keycloak.org/server/all-config for all options
+
+# Basic settings
+http-enabled=true
+http-port={{ keycloak_http_port | default('8080') }}
+https-port={{ keycloak_https_port | default('8443') }}
+hostname={{ keycloak_hostname | default(ansible_fqdn) }}
+
+# Database configuration
+{% if keycloak_db_type | default('h2') == 'postgresql' %}
+db=postgres
+db-username={{ keycloak_db_username | default('keycloak') }}
+db-password={{ keycloak_db_password | default('changeme') }}
+db-url=jdbc:postgresql://{{ keycloak_db_host | default('localhost') }}:{{ keycloak_db_port | default('5432') }}/{{ keycloak_db_name | default('keycloak') }}
+{% else %}
+# Default H2 database (for development only)
+db=dev-file
+{% endif %}
+
+# Logging
+log=console,file
+log-file=/opt/keycloak/logs/keycloak.log
+log-level={{ keycloak_log_level | default('INFO') }}
+
+# Cache configuration
+cache={{ keycloak_cache_mode | default('local') }}
+
+# Proxy configuration
+{% if keycloak_behind_proxy | default(false) | bool %}
+proxy=edge
+{% endif %}
+
+# Additional custom properties
+{% for key, value in keycloak_additional_properties | default({}) | items() %}
+{{ key }}={{ value }}
+{% endfor %}

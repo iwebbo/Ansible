@@ -1,38 +1,29 @@
 ---
-# tasks/install.yml - Tâches d'installation de Keycloak
+# tasks/install.yml - Version corrigée pour éviter le problème de symlink
 
 - name: Install required packages
   apt:
     name:
       - unzip
       - curl
-      - ca-certificates
-      - gnupg
+      - default-jdk
     state: present
     update_cache: yes
   tags:
     - install
     - packages
 
-- name: Install OpenJDK 21
-  block:
-    - name: Add adoptium repository
-      apt_repository:
-        repo: "deb [signed-by=/usr/share/keyrings/adoptium.asc] https://packages.adoptium.net/artifactory/deb $(lsb_release -cs) main"
-        state: present
-        filename: adoptium
+- name: Verify Java installation
+  command: java -version
+  register: java_version
+  changed_when: false
+  tags:
+    - install
+    - java
 
-    - name: Add adoptium gpg key
-      apt_key:
-        url: https://packages.adoptium.net/artifactory/api/gpg/key/public
-        keyring: /usr/share/keyrings/adoptium.asc
-        state: present
-
-    - name: Install OpenJDK 21
-      apt:
-        name: temurin-21-jdk
-        state: present
-        update_cache: yes
+- name: Display Java version
+  debug:
+    var: java_version.stderr_lines
   tags:
     - install
     - java
@@ -41,16 +32,35 @@
   user:
     name: keycloak
     system: yes
-    shell: /sbin/nologin
+    shell: /bin/bash
     home: /opt/keycloak
     create_home: no
   tags:
     - install
     - user
 
-- name: Create Keycloak installation directory
-  file:
+# Vérifier et supprimer le répertoire /opt/keycloak s'il existe déjà
+- name: Check if /opt/keycloak exists and is a directory (not a symlink)
+  stat:
     path: /opt/keycloak
+  register: keycloak_dir
+  tags:
+    - install
+    - directory
+
+- name: Backup existing Keycloak directory if it exists and is not a symlink
+  command: mv /opt/keycloak /opt/keycloak.bak
+  args:
+    removes: /opt/keycloak
+  when: keycloak_dir.stat.exists and keycloak_dir.stat.isdir and not keycloak_dir.stat.islnk
+  tags:
+    - install
+    - directory
+
+# Créer le répertoire parent pour Keycloak
+- name: Create parent directory for Keycloak installations
+  file:
+    path: /opt/keycloak-versions
     state: directory
     owner: keycloak
     group: keycloak
@@ -58,6 +68,26 @@
   tags:
     - install
     - directory
+
+- name: Ensure Keycloak directories have correct permissions
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: keycloak
+    group: keycloak
+    mode: '0755'  # Mode plus permissif
+    recurse: yes
+  loop:
+    - "/opt/keycloak"
+    - "/opt/keycloak/data"
+    - "/opt/keycloak/conf"
+    - "/opt/keycloak/lib"
+    - "/opt/keycloak/providers"
+    - "/opt/keycloak/themes"
+  tags:
+    - install
+    - permissions
+    - configure
 
 - name: Download Keycloak ZIP
   get_url:
@@ -75,25 +105,36 @@
 - name: Extract Keycloak ZIP
   unarchive:
     src: "/tmp/keycloak-{{ keycloak_version }}.zip"
-    dest: "/opt"
+    dest: "/opt/keycloak-versions/"
     remote_src: yes
     owner: keycloak
     group: keycloak
-    creates: "/opt/keycloak-{{ keycloak_version }}"
+    creates: "/opt/keycloak-versions/keycloak-{{ keycloak_version }}"
   tags:
     - install
     - extract
 
 - name: Create symbolic link for Keycloak
   file:
-    src: "/opt/keycloak-{{ keycloak_version }}"
+    src: "/opt/keycloak-versions/keycloak-{{ keycloak_version }}"
     dest: /opt/keycloak
     state: link
     owner: keycloak
     group: keycloak
+    force: yes
   tags:
     - install
     - symlink
+
+- name: Ensure bin directory is executable
+  file:
+    path: /opt/keycloak/bin
+    state: directory
+    mode: '0750'
+    recurse: yes
+  tags:
+    - install
+    - permissions
 
 - name: Cleanup temporary download file
   file:

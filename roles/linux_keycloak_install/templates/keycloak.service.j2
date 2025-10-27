@@ -7,10 +7,13 @@ Type=simple
 User=keycloak
 Group=keycloak
 WorkingDirectory=/opt/keycloak
-ExecStart=/opt/keycloak/bin/kc.sh {{ keycloak_launch_mode | default('start-dev') }} {% for option in keycloak_launch_options | default([]) %}{{ option }} {% endfor %}
+
+# Exécuter build une fois avant de démarrer le service
+ExecStartPre=/opt/keycloak/bin/keycloak-init.sh
+ExecStart=/opt/keycloak/bin/kc.sh {{ keycloak_launch_mode }} {% for option in keycloak_launch_options | default([]) %}{{ option }} {% endfor %}
 
 Environment="JAVA_OPTS=-Xms{{ keycloak_java_min_memory | default('512m') }} -Xmx{{ keycloak_java_max_memory | default('1g') }}"
-TimeoutStartSec=180
+TimeoutStartSec=300
 TimeoutStopSec=60
 Restart=on-failure
 RestartSec=30
@@ -18,9 +21,9 @@ SuccessExitStatus=0
 
 # Hardening options
 ProtectHome=true
-ProtectSystem=strict
 PrivateTmp=true
 NoNewPrivileges=true
+ReadWritePaths=/opt/keycloak
 
 [Install]
 WantedBy=multi-user.target

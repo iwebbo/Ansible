@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Définir les variables d'environnement pour l'admin
+export KEYCLOAK_ADMIN="{{ keycloak_admin_user }}"
+export KEYCLOAK_ADMIN_PASSWORD="{{ keycloak_admin_password }}"
+
+# Mode de démarrage basé sur la configuration
+{% if "{{ keycloak_launch_mode }}" == 'start-dev' %}
+# Mode développement
+exec /opt/keycloak/bin/kc.sh start-dev --http-enabled=true {% for option in keycloak_launch_options | default([]) %}{{ option }} {% endfor %}
+{% else %}
+# Mode production
+exec /opt/keycloak/bin/kc.sh start --http-enabled=true {% for option in keycloak_launch_options | default([]) %}{{ option }} {% endfor %}
+{% endif %}
