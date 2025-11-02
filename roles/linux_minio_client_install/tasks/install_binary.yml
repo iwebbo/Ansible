@@ -1,0 +1,14 @@
+---
+- name: "Download mc binary"
+  ansible.builtin.get_url:
+    url: "{{ minio_client_binary_url }}"
+    dest: "{{ minio_client_install_dir }}/mc"
+    mode: "{{ minio_client_binary_mode }}"
+
+- name: "Verify mc executable"
+  ansible.builtin.command: "{{ minio_client_install_dir }}/mc --version"
+  register: mc_version
+  changed_when: false
+
+- debug:
+    msg: "Installed MC version={{ mc_version.stdout }}"

@@ -1,0 +1,25 @@
+# Version de mc
+minio_client_version: "latest"
+
+# URL binaire générique (backup)
+minio_client_binary_url: "https://dl.min.io/client/mc/release/linux-amd64/mc"
+
+# Dossier installation
+minio_client_install_dir: "/usr/local/bin"
+minio_client_binary_name: "mc"
+
+# Répertoire config (user Jenkins ou remote user)
+minio_client_config_dir: "{{ ansible_env.HOME }}/.mc"
+
+minio_client_binary_mode: "0755"
+
+# Credentials injectées par Jenkins (placeholder)
+minio_access_key: ""
+minio_secret_key: ""
+
+# Paramètres alias placeholders (set dans autre rôle/job)
+minio_alias_name: ""
+minio_alias_url: ""
+
+minio_mc_deb_url: "https://dl.min.io/client/mc/release/linux-amd64/mc.deb"
+minio_mc_rpm_url: "https://dl.min.io/client/mc/release/linux-amd64/mc.rpm"

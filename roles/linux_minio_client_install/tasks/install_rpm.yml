@@ -1,0 +1,11 @@
+---
+- name: "Download mc RPM"
+  ansible.builtin.get_url:
+    url: "{{ minio_mc_rpm_url }}"
+    dest: "/tmp/mc.rpm"
+    mode: "0644"
+
+- name: "Install mc"
+  ansible.builtin.yum:
+    name: "/tmp/mc.rpm"
+    state: present

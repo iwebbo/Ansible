@@ -1,0 +1,11 @@
+---
+- name: "Download mc Debian package"
+  ansible.builtin.get_url:
+    url: "{{ minio_mc_deb_url }}"
+    dest: "/tmp/mc.deb"
+    mode: "0644"
+
+- name: "Install mc"
+  ansible.builtin.apt:
+    deb: "/tmp/mc.deb"
+    state: present

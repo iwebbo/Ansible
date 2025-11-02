@@ -1,0 +1,19 @@
+backend:
+  image:
+    repository: "{{ project_name }}-backend"
+    tag: "{{ release_version }}"
+    pullPolicy: IfNotPresent
+  service:
+    type: NodePort
+    port: 8000
+    nodePort: 32088
+
+frontend:
+  image:
+    repository: "{{ project_name }}-frontend"
+    tag: "{{ release_version }}"
+    pullPolicy: IfNotPresent
+  service:
+    type: NodePort
+    port: 80
+    nodePort: 32080

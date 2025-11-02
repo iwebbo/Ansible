@@ -1,0 +1,127 @@
+---
+
+- name: Create working dir
+  file:
+    path: "{{ work_dir }}"
+    state: directory
+
+- name: Create helm chart dir
+  file:
+    path: "{{ work_dir }}/helm-chart"
+    state: directory
+
+- name: Create helm-chart/templates chart dir
+  file:
+    path: "{{ work_dir }}/helm-chart/templates"
+    state: directory
+
+### 1️⃣ Récupération artefacts MinIO
+- name: Download backend image from MinIO
+  environment:
+    MC_CONFIG_DIR: "/root/.mc"
+  command: >
+    mc cp {{ minio_alias }}/{{ minio_bucket }}/{{ project_name }}-backend-{{ release_version }}.tar
+    {{ backend_tar }}
+
+- name: Download frontend image from MinIO
+  environment:
+    MC_CONFIG_DIR: "/root/.mc"
+  command: >
+    mc cp {{ minio_alias }}/{{ minio_bucket }}/{{ project_name }}-frontend-{{ release_version }}.tar
+    {{ frontend_tar }}
+
+### 2️⃣ Import container images
+- name: Import backend image into containerd
+  command: sudo ctr -n k8s.io images import {{ backend_tar }}
+
+- name: Import frontend image into containerd
+  command: sudo ctr -n k8s.io images import {{ frontend_tar }}
+
+- name: Validate images loaded
+  command: sudo ctr -n k8s.io images ls
+  register: ctr_images
+
+- name: Fail if images missing
+  assert:
+    that:
+      - "'{{ project_name }}-backend:{{ release_version }}' in ctr_images.stdout"
+      - "'{{ project_name }}-frontend:{{ release_version }}' in ctr_images.stdout"
+    fail_msg: "Images not imported into containerd"
+
+- name: Render backend-deployment.yaml
+  copy:
+    src: helm-chart/backend-deployment.yaml
+    dest: "{{ work_dir }}/helm-chart/templates/backend-deployment.yaml"
+
+- name: Render backend-service.yaml
+  copy:
+    src: helm-chart/backend-service.yaml
+    dest: "{{ work_dir }}/helm-chart/templates/backend-service.yaml"
+
+- name: Render frontend-deployment.yaml
+  copy:
+    src: helm-chart/frontend-deployment.yaml
+    dest: "{{ work_dir }}/helm-chart/templates/frontend-deployment.yaml"
+
+- name: Render frontend-service.yaml
+  copy:
+    src: helm-chart/frontend-service.yaml
+    dest: "{{ work_dir }}/helm-chart/templates/frontend-service.yaml"
+
+- name: Render frontend-config.yaml
+  copy:
+    src: helm-chart/frontend-config.yaml
+    dest: "{{ work_dir }}/helm-chart/templates/frontend-config.yaml"
+
+- name: Render postgre-deployment.yaml
+  copy:
+    src: helm-chart/postgres-deployment.yaml
+    dest: "{{ work_dir }}/helm-chart/templates/postgres-deployment.yaml"
+
+- name: Render postgre-pv.yaml
+  copy:
+    src: helm-chart/postgres-pv.yaml
+    dest: "{{ work_dir }}/helm-chart/templates/postgres-pv.yaml"
+
+- name: Render Chart.yaml
+  template:
+    src: Chart.yaml.j2
+    dest: "{{ work_dir }}/helm-chart/Chart.yaml"
+
+- name: Render values.yaml
+  template:
+    src: values.yaml.j2
+    dest: "{{ work_dir }}/helm-chart/values.yaml"
+
+### Create secret helm to replace .env docker
+## Add remove secret et le recrer à chaque fois sinon pas de news entrees
+- name: Create secret helm chart for .env docker
+  become: true 
+  command: >
+    kubectl create secret generic theai-secret \
+    --from-literal=SECRET_KEY="supersecretkey" \
+    --from-literal=DEFAULT_ADMIN_USERNAME="admin" \
+    --from-literal=DEFAULT_ADMIN_PASSWORD="AdminPass123" \
+    --from-literal=DEFAULT_ADMIN_EMAIL="admin@example.com" \
+    --from-literal=POSTGRES_DB="theaidb" \
+    --from-literal=POSTGRES_USER="admindb" \
+    --from-literal=POSTGRES_PASSWORD="admindb123" \
+    -n theai
+  register: secret_result
+  failed_when: secret_result.rc != 0 and "AlreadyExists" not in secret_result.stderr
+
+### 4️⃣ Deploy with Helm
+- name: Deploy app via Helm
+  become: true
+  command: >
+    sudo helm upgrade --install {{ project_name }}
+    {{ work_dir }}/helm-chart
+    --namespace {{ project_name }}
+    --create-namespace
+    --values {{ work_dir }}/helm-chart/values.yaml
+
+## Restart via rollout kubectl
+- name: Restart via rollout kubectl app
+  become: true
+  command: >
+      sudo kubectl rollout restart deployment/{{ project_name }}-frontend -n {{ project_name }}

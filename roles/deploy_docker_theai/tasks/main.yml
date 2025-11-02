@@ -1,0 +1,98 @@
+
+- name: Download backend image from MinIO
+  environment:
+    MC_CONFIG_DIR: "/root/.mc"
+  command: >
+    mc cp {{ minio_alias }}/{{ minio_bucket }}/{{ project_name }}-backend-{{ release_version }}.tar
+    {{ backend_tar }}
+
+- name: Download frontend image from MinIO
+  environment:
+    MC_CONFIG_DIR: "/root/.mc"
+  command: >
+    mc cp {{ minio_alias }}/{{ minio_bucket }}/{{ project_name }}-frontend-{{ release_version }}.tar
+    {{ frontend_tar }}
+
+- name: Load backend Docker image from tar
+  ansible.builtin.command:
+    cmd: >
+      docker load -i /tmp/{{ project_name }}-backend-{{ release_version }}.tar
+  become: true
+
+- name: Load frontend Docker image from tar
+  ansible.builtin.command:
+    cmd: >
+      docker load -i /tmp/{{ project_name }}-frontend-{{ release_version }}.tar
+  become: true
+
+- name: Template nginx.conf copy
+  template:
+    src: nginx.conf.j2
+    dest: "/tmp/nginx.conf"
+
+- name: Template .env copy
+  template:
+    src: .env.j2
+    dest: "/tmp/.env"
+
+- name: Remove existing backend container (ignore if missing)
+  ansible.builtin.docker_container:
+    name: "{{ project_name }}-backend"
+    state: absent
+  ignore_errors: true
+  become: true
+
+- name: Remove existing frontend container (ignore if missing)
+  ansible.builtin.docker_container:
+    name: "{{ project_name }}-frontend"
+    state: absent
+  ignore_errors: true
+  become: true
+
+- name: Create docker network
+  docker_network:
+    name: prod_net
+
+- name: Run postgres DB
+  docker_container:
+    name: db
+    image: postgres:14
+    env_file: /tmp/.env
+    networks:
+      - name: prod_net
+    volumes:
+      - /opt/theai/db:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart_policy: always
+    state: started
+  become: true
+
+- name: Run backend container
+  ansible.builtin.docker_container:
+    name: "{{ project_name }}-backend"
+    image: "{{ project_name }}-backend:{{ release_version }}"
+    state: started
+    restart_policy: always
+    env_file: /tmp/.env
+    networks:
+      - name: prod_net
+    ports:
+      - "8000:8000"
+    volumes:
+      - "{{ scan_result }}:/app/scan_results"
+  become: true
+
+- name: Run frontend container
+  ansible.builtin.docker_container:
+    name: "{{ project_name }}-frontend"
+    image: "{{ project_name }}-frontend:{{ release_version }}"
+    volumes:
+      - /tmp/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    state: started
+    restart_policy: always
+    networks:
+      - name: prod_net
+    ports:
+      - "80:80" 
+  become: true

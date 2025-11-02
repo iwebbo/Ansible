@@ -1,0 +1,13 @@
+# vars/main.yml
+project_name: "theai"
+release_version: ""   # passé par pipeline (ex: v1.0)
+
+# MinIO - To be set before to deploy via minio-client job
+# name & config dans ~/.mc/config.json
+minio_alias: "production"
+minio_bucket: "theai"
+
+# Local paths
+scan_result: "/tmp/scan_results"
+backend_tar: "/tmp/{{ project_name }}-backend-{{ release_version }}.tar"
+frontend_tar: "/tmp/{{ project_name }}-frontend-{{ release_version }}.tar"

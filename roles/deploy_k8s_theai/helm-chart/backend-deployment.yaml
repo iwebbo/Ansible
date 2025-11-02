@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-backend
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-backend
+    spec:
+      nodeSelector:
+{{ toYaml .Values.nodeSelector | indent 8 }}
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.backend.service.port }}
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: theai-secret
+                  key: SECRET_KEY
+
+            - name: DEFAULT_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: theai-secret
+                  key: DEFAULT_ADMIN_USERNAME
+
+            - name: DEFAULT_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: theai-secret
+                  key: DEFAULT_ADMIN_PASSWORD
+
+            - name: DEFAULT_ADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: theai-secret
+                  key: DEFAULT_ADMIN_EMAIL
+ 
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: theai-secret
+                  key: POSTGRES_DB
+
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: theai-secret
+                  key: POSTGRES_USER
+
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: theai-secret
+                  key: POSTGRES_PASSWORD
+
+            - name: POSTGRES_SERVER
+              value: "{{ .Release.Name }}-postgres"
+            
+            - name: POSTGRES_PORT
+              value: "5432"
