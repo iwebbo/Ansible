@@ -28,41 +28,6 @@
     - configure
     - config
 
-- name: Create admin user script
-  template:
-    src: create-admin-user.cli.j2
-    dest: /opt/keycloak/bin/create-admin-user.cli
-    owner: keycloak
-    group: keycloak
-    mode: '0750'
-  tags:
-    - configure
-    - admin
-
-- name: Create admin user if not exists
-  command: >
-    /opt/keycloak/bin/kc.sh build
-  become: yes
-  #become_user: keycloak
-  args:
-    chdir: /opt/keycloak
-    creates: /opt/keycloak/data/.admin-created
-  tags:
-    - configure
-    - admin
-    - build
-
-- name: Mark admin user as created
-  file:
-    path: /opt/keycloak/data/.admin-created
-    state: touch
-    owner: keycloak
-    group: keycloak
-    mode: '0640'
-  tags:
-    - configure
-    - admin
-
 # - name: Configure firewall rules
 #   ufw:
 #     rule: allow

@@ -1,5 +1,5 @@
 ---
-# defaults/main.yml - Variables par défaut pour le rôle Keycloak
+# defaults/main.yml
 
 # Version Keycloak
 keycloak_version: "26.3.2"
@@ -9,7 +9,7 @@ keycloak_java_min_memory: "512m"
 keycloak_java_max_memory: "1g"
 
 # Configuration du serveur
-keycloak_hostname: "{{ ansible_fqdn }}"
+keycloak_hostname: "{{ ansible_fqdn }}" # HOST fill from Pipeline jenkins parameters
 keycloak_http_port: 8080
 keycloak_https_port: 8443
 
@@ -24,7 +24,7 @@ keycloak_db_host: "localhost"
 keycloak_db_port: 5432
 keycloak_db_name: "keycloak"
 keycloak_db_username: "keycloak"
-keycloak_db_password: "change_me"  # À remplacer par vault_keycloak_db_password
+keycloak_db_password: "change_me"
 
 # Configuration de logs
 keycloak_log_level: "INFO"
@@ -37,7 +37,7 @@ keycloak_configure_firewall: true
 
 # Admin user
 keycloak_admin_user: "admin"
-keycloak_admin_password: "change_me"  # À remplacer par vault_keycloak_admin_password
+keycloak_admin_password: "change_me"
 
 # Cache mode
 keycloak_cache_mode: "local"  # 'local' (standalone) ou 'distributed' (cluster)

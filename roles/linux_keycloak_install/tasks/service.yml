@@ -24,7 +24,7 @@
 # Pre-build Keycloak avant de démarrer le service
 - name: Build Keycloak before starting service
   command: /opt/keycloak/bin/kc.sh build
-  become: yes
+  become: true
   args:
     chdir: /opt/keycloak
   register: build_result
@@ -52,6 +52,16 @@
     - configure
     - build
     - service
+
+- name: Bootstrap admin user with environment variable
+  shell: /opt/keycloak/bin/kc.sh bootstrap-admin user --username admin --password:env PASS_VAR
+  environment:
+    PASS_VAR: "{{ keycloak_admin_password }}"
+  register: load_pass_var
+
+- name: Display command output
+  debug:
+    msg: "{{ load_pass_var.stdout }}"
 
 - name: Ensure Keycloak service is enabled
   systemd:
@@ -81,17 +91,3 @@
   tags:
     - service
     - start
-    
-- name: Check if Keycloak is responding
-  uri:
-    url: "http://localhost:8080/health"
-    return_content: yes
-    status_code: 200
-    timeout: 20
-  register: keycloak_health
-  until: keycloak_health is succeeded
-  retries: 10
-  delay: 50
-  tags:
-    - service
-    - verify
