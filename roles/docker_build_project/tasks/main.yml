@@ -1,41 +1,29 @@
 ---
 # tasks file for docker_build_project
-- name: "Validation - Vérifier le chemin du projet"
+- name: "Validation - Project Path"
   fail:
     msg: "Le paramètre 'project_path' est obligatoire"
   when: project_path == ""
+
+- name: "Validation - Build Version"
+  fail:
+    msg: "Le paramètre 'build_version' est obligatoire"
+  when: build_version == ""
+
+- name: "Validation - GIT Repo"
+  fail:
+    msg: "Le paramètre 'repo_git' est obligatoire"
+  when: repo_git == ""
 
 - name: "Info - Affichage de l'action"
   debug:
     msg: "Action {{ docker_action }} sur {{ project_name }} dans {{ project_path }}"
 
-- name: "Vérification - Le répertoire existe (Windows)"
-  win_stat:
-    path: "{{ project_path }}"
-  register: dir_check_windows
-  when: ansible_os_family == "Windows"
-
-- name: "Vérification - Le répertoire existe (Linux)"
-  stat:
-    path: "{{ project_path }}"
-  register: dir_check_linux
-  when: ansible_os_family != "Windows"
-
-- name: "Échec si répertoire inexistant (Windows)"
-  fail:
-    msg: "Le répertoire {{ project_path }} n'existe pas"
-  when: 
-    - ansible_os_family == "Windows"
-    - not dir_check_windows.stat.exists
-
-- name: "Échec si répertoire inexistant (Linux)"
-  fail:
-    msg: "Le répertoire {{ project_path }} n'existe pas"
-  when: 
-    - ansible_os_family != "Windows"
-    - not dir_check_linux.stat.exists
-
 # Actions conditionnelles
+- name: "Action BUILD & PUSH TO MINIO"
+  include_tasks: build_push_minio.yml
+  when: docker_action == "build_push_minio_S3"
+
 - name: "Action BUILD"
   include_tasks: build.yml
   when: docker_action == "build"

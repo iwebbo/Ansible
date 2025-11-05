@@ -6,9 +6,12 @@
   when: ansible_os_family == "Windows"
 
 - name: "Down - Suppression des services (Linux)"
+  become: true
+  become_method: sudo
+  become_flags: "-i"
   shell: |
     cd "{{ project_path }}"
-    docker-compose down {{ '-v' if remove_volumes else '' }}
+    docker down {{ '-v' if remove_volumes else '' }}
   when: ansible_os_family != "Windows"
 
 - name: "Down - Confirmation"

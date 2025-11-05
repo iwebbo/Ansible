@@ -8,6 +8,9 @@
   register: status_output_windows
 
 - name: "Status - État des services (Linux)"
+  become: true
+  become_method: sudo
+  become_flags: "-i"
   shell: |
     cd "{{ project_path }}"
     echo "=== Services ==="

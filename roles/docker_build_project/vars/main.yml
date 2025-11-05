@@ -2,6 +2,19 @@
 # vars file for docker_build_project
 docker_action: ""  # build, start, stop, down, restart, status
 project_path: ""         # Chemin obligatoire vers le projet
-project_name: "server-monitoring"
+project_name: "server-monitoring" 
 force_rebuild: false
 remove_volumes: false
+
+# Buil version
+build_version: "v1.0"
+
+# Configuration MinIO
+minio_host: "http://192.168.1.17:9000"
+minio_alias: ""
+minio_access_key: ""
+minio_secret_key: ""
+minio_bucket: ""
+
+# GIT 
+repo_git: ""

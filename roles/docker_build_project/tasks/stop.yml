@@ -6,6 +6,9 @@
   when: ansible_os_family == "Windows"
 
 - name: "Stop - Arrêt des services (Linux)"
+  become: true
+  become_method: sudo
+  become_flags: "-i"
   shell: |
     cd "{{ project_path }}"
     docker-compose stop
