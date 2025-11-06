@@ -1,0 +1,39 @@
+---
+galaxy_info:
+  role_name: deploy_helmchart_stack
+  author: "A&ECoding"
+  description: >
+    Ansible role that automates the deployment of a full Kubernetes stack using Helm Charts.
+    Handles the complete lifecycle: Git repository management, Helm configuration, deployment,
+    ingress setup, and user token generation.
+  company: "A&ECoding"
+  license: MIT
+
+  min_ansible_version: 2.14
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - jammy
+        - focal
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+    - name: CentOS
+      versions:
+        - 8
+        - 9
+
+  galaxy_tags:
+    - kubernetes
+    - helm
+    - git
+    - devops
+    - ci_cd
+    - automation
+    - ingress
+    - secret
+    - deployment
+
+dependencies: []

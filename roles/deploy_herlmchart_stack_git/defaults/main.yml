@@ -1,0 +1,27 @@
+---
+# defaults file for deploy_herlmchart_stack_git
+## ERROR : ERROR! couldn't resolve module/action 'community.kubernetes.helm_repository'. This often indicates a misspelling, missing collection, or incorrect module path.
+## WARNING : Depend of community.kubernetes.helm_repository
+## INSTALL : ansible-galaxy collection install community.kubernetes
+
+helm_repo_name: ""
+helm_repo_url: ""
+chart_name: ""
+namespace: ""
+release_name: ""
+project_path: ""
+repo_git: ""
+
+##File *values.yml
+values_file: ""
+file_enabled: false
+
+##Ingress
+ingress_enabled: false        # to be surcharge from Jenkins
+values_file_ingress: ""
+ingress_controler: ""
+
+##User
+values_file_users: ""
+user_token: ""
+generate_token: false

@@ -1,0 +1,37 @@
+---
+galaxy_info:
+  role_name: deploy_helmchart_stack
+  author: "A&ECoding"
+  description: >
+    Minimal Ansible role to manage Helm repositories and deploy or upgrade
+    Kubernetes Helm Charts. Ensures repository synchronization and namespace
+    creation for consistent and automated delivery.
+  company: "A&ECoding"
+  license: MIT
+
+  min_ansible_version: 2.14
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - jammy
+        - focal
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+    - name: CentOS
+      versions:
+        - 8
+        - 9
+
+  galaxy_tags:
+    - kubernetes
+    - helm
+    - devops
+    - ci_cd
+    - automation
+    - cloud
+    - deployment
+
+dependencies: []

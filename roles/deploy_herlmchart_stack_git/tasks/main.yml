@@ -1,0 +1,122 @@
+---
+# tasks file for deploy_herlmchart_stack
+- name: Cleanup previous workspace
+  become: true
+  file:
+    path: "{{ project_path }}"
+    state: absent
+
+- name: Recreate workspace directory
+  file:
+    path: "{{ project_path }}"
+    state: directory
+
+- name: Show Repo GIT
+  debug:
+    msg: "GIT Repo = {{ repo_git }}"
+
+- name: Clone repository fresh
+  become: true
+  ansible.builtin.git:
+    repo: "{{ repo_git }}"
+    dest: "{{ project_path }}"
+    version: master
+    force: yes
+  register: git_result
+
+- name: Debug git
+  debug:
+    var: git_result
+
+- name: Show file *YAML
+  ansible.builtin.command:
+    cmd: ls -ath {{ project_path }}
+  register: project_files
+
+- name: Display YAML files in project path
+  ansible.builtin.debug:
+    msg: "{{ project_files.stdout_lines }}"
+
+- name: Add repo Helm Chart
+  kubernetes.core.helm_repository:
+    name: "{{ helm_repo_name }}"
+    repo_url: "{{ helm_repo_url }}"
+  register: repo_added
+
+- name: Update Helm charts
+  kubernetes.core.helm_repository:
+    name: "{{ helm_repo_name }}"
+    repo_url: "{{ helm_repo_url }}"
+    force_update: yes
+  when: repo_added.changed
+
+- name: Install & Update from Helm Chart (with custom values)
+  kubernetes.core.helm:
+    release_name: "{{ release_name }}"
+    chart_ref: "{{ helm_repo_name }}/{{ chart_name }}"
+    release_namespace: "{{ namespace }}"
+    create_namespace: true
+    values_files:
+      - "{{ project_path }}/{{ values_file }}"
+    force: true
+    update_repo_cache: true
+  when: file_enabled | bool
+
+- name: Install & Update from Helm Chart (without custom values)
+  kubernetes.core.helm:
+    release_name: "{{ release_name }}"
+    chart_ref: "{{ helm_repo_name }}/{{ chart_name }}"
+    release_namespace: "{{ namespace }}"
+    create_namespace: true
+    force: true
+    update_repo_cache: true
+  when: not (file_enabled | bool)
+
+- name: Apply ingress if ingress_enabled
+  ansible.builtin.command:
+    cmd: kubectl apply -f {{ project_path }}/{{ values_file_ingress }}
+  when: ingress_enabled | bool
+  register: ingress_apply
+  changed_when: "'configured' in ingress_apply.stdout or 'created' in ingress_apply.stdout"
+
+- name: Get ingress creation status
+  ansible.builtin.command:
+    cmd: kubectl get ingress -n {{ namespace }}
+  register: ingress_status
+
+- name: Display ingress status
+  ansible.builtin.debug:
+    msg: "{{ ingress_status.stdout_lines }}"
+
+- name: Get port Exposed
+  ansible.builtin.command:
+    cmd: kubectl get svc -n {{ ingress_controler }}
+  register: ingress_status
+
+- name: Display ingress status
+  ansible.builtin.debug:
+    msg: "{{ ingress_status.stdout_lines }}"
+
+#### chjange icic
+- name: Apply User if needed
+  ansible.builtin.command:
+    cmd: kubectl apply -f {{ project_path }}/{{ values_file_users }} -n {{ namespace }}
+  when: generate_token | bool
+  register: generate_token
+  changed_when: "'configured' in generate_token.stdout or 'created' in generate_token.stdout"
+
+- name: Retrieve the secret token
+  ansible.builtin.command:
+    cmd: kubectl get secret {{ user_token }} -n {{ namespace }} -o yaml
+  register: secret_token
+
+- name: Display secret token
+  ansible.builtin.debug:
+    msg: "{{ secret_token.stdout_lines }}"
+
+### Clean UP ###
+- name: Cleanup workspace after build (optional safety)
+  become: true
+  file:
+    path: "{{ project_path }}"
+    state: absent
