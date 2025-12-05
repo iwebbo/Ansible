@@ -1,0 +1,146 @@
+### GIT Clone ###
+- name: Cleanup previous workspace
+  become: true
+  file:
+    path: "{{ project_path }}"
+    state: absent
+
+- name: Recreate workspace directory
+  file:
+    path: "{{ project_path }}"
+    state: directory
+
+- name: Show Repo GIT
+  debug:
+    msg: "GIT Repo = {{ repo_git }}"
+
+- name: Clone repository fresh
+  become: true
+  ansible.builtin.git:
+    repo: "{{ repo_git }}"
+    dest: "{{ project_path }}"
+    version: master
+    force: yes
+  register: git_result
+
+- name: Debug git
+  debug:
+    var: git_result
+   
+- name: Show build version
+  debug:
+    msg: "Build version = {{ build_version }}"
+
+### BACKEND BUILD AMD64 ###
+- name: Ensure buildx builder exists
+  become: true
+  ansible.builtin.command:
+    cmd: docker buildx create --name amd64-builder --use
+  ignore_errors: true
+
+- name: Inspect buildx builder
+  become: true
+  ansible.builtin.command:
+    cmd: docker buildx inspect amd64-builder
+  register: buildx_info
+
+- name: Debug buildx info
+  debug:
+    var: buildx_info.stdout_lines
+
+- name: Build backend Docker image for amd64
+  become: true
+  become_method: sudo
+  become_flags: "-i"
+  ansible.builtin.command:
+    cmd: >
+      docker buildx build
+      --platform linux/amd64
+      --no-cache
+      --pull
+      -t {{ project_name }}-backend:{{ build_version }}-amd64
+      --load .
+  args:
+    chdir: "{{ project_path }}/backend"
+
+- name: Save backend Docker image amd64 to tar
+  become: true
+  become_method: sudo
+  become_flags: "-i"
+  ansible.builtin.command:
+    cmd: >
+      docker save {{ project_name }}-backend:{{ build_version }}-amd64
+      -o {{ project_name }}-backend-{{ build_version }}-amd64.tar
+  args:
+    chdir: "{{ project_path }}/backend"
+
+
+### FRONTEND BUILD AMD64 ###
+- name: Build frontend Docker image for amd64
+  become: true
+  become_method: sudo
+  become_flags: "-i"
+  ansible.builtin.command:
+    cmd: >
+      docker buildx build
+      --platform linux/amd64
+      --no-cache
+      --pull
+      -t {{ project_name }}-frontend:{{ build_version }}-amd64
+      --load .
+  args:
+    chdir: "{{ project_path }}/frontend"
+
+- name: Save frontend Docker image amd64 to tar
+  become: true
+  become_method: sudo
+  become_flags: "-i"
+  ansible.builtin.command:
+    cmd: >
+      docker save {{ project_name }}-frontend:{{ build_version }}-amd64
+      -o {{ project_name }}-frontend-{{ build_version }}-amd64.tar
+  args:
+    chdir: "{{ project_path }}/frontend"
+
+### MINIO PUSH ###
+- name: Configure MinIO alias
+  ansible.builtin.command:
+    cmd: >
+      mc alias set {{ minio_alias }} {{ minio_host }}
+      {{ minio_access_key }} {{ minio_secret_key }}
+
+- name: Create MinIO bucket if not exists (and enable versioning)
+  block:
+    - name: Create bucket
+      ansible.builtin.command:
+        cmd: >
+          mc mb -p {{ minio_alias }}/{{ minio_bucket }}
+      ignore_errors: true
+
+    - name: Enable versioning
+      ansible.builtin.command:
+        cmd: >
+          mc version enable {{ minio_alias }}/{{ minio_bucket }}
+
+
+### UPLOAD AMD64 IMAGES ###
+- name: Upload backend amd64 image to MinIO
+  become: true
+  ansible.builtin.command:
+    cmd: >
+      mc cp {{ project_path }}/backend/{{ project_name }}-backend-{{ build_version }}-amd64.tar
+      {{ minio_alias }}/{{ minio_bucket }}/{{ project_name }}-backend-{{ build_version }}-amd64.tar
+
+- name: Upload frontend amd64 image to MinIO
+  become: true
+  ansible.builtin.command:
+    cmd: >
+      mc cp {{ project_path }}/frontend/{{ project_name }}-frontend-{{ build_version }}-amd64.tar
+      {{ minio_alias }}/{{ minio_bucket }}/{{ project_name }}-frontend-{{ build_version }}-amd64.tar
+
+### Clean UP ###
+- name: Cleanup workspace after build (optional safety)
+  become: true
+  file:
+    path: "{{ project_path }}"
+    state: absent

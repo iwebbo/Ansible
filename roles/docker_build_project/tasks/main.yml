@@ -20,8 +20,12 @@
     msg: "Action {{ docker_action }} sur {{ project_name }} dans {{ project_path }}"
 
 # Actions conditionnelles
-- name: "Action BUILD & PUSH TO MINIO"
-  include_tasks: build_push_minio.yml
+- name: "Action BUILD AMD64 & PUSH TO MINIO"
+  include_tasks: build_amd64_docker_push_minio.yml
+  when: docker_action == "build_amd64_push_minio_S3"
+
+- name: "Action BUILD DOCKER & PUSH TO MINIO"
+  include_tasks: build_docker_push_minio.yml
   when: docker_action == "build_push_minio_S3"
 
 - name: "Action BUILD"
