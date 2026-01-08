@@ -1,12 +1,22 @@
 # Ansible Role: security_report
 
-your role description
+Generate comprehensive Secuirity Reporting for Linu Server from Ansible Role
 
 ## General Information
 
-**Author:** your name
-**License:** license (GPL-2.0-or-later, MIT, etc)
-**Minimum Ansible Version:** 2.1
+**Author:** A&ECoding
+**License:** MIT
+**Minimum Ansible Version:** 2.10
+
+**Supported Platforms:**
+- Ubuntu
+  - Versions: all
+- Debian
+  - Versions: all
+- EL
+  - Versions: all
+- Fedora
+  - Versions: all
 
 ## Variables
 
@@ -234,4 +244,3 @@ handlers/
 defaults/
     └── main.yml
 README.md
-```

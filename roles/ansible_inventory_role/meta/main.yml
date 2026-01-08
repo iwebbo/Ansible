@@ -2,7 +2,7 @@
 galaxy_info:
   author: A&ECoding
   description: Generate comprehensive Ansible inventory reports with all magic variables and facts
-  company: Your Company
+  company: A&ECoding
   
   license: MIT
   
