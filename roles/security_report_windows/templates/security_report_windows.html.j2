@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows Security Report - {{ inventory_hostname }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0078D4 0%, #005A9E 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #0078D4 0%, #005A9E 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header .meta { opacity: 0.9; font-size: 1.1em; }
+        .content { padding: 30px; }
+        .section {
+            margin-bottom: 40px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 25px;
+            border-left: 5px solid #0078D4;
+        }
+        .section-title {
+            font-size: 1.8em;
+            color: #005A9E;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #0078D4;
+        }
+        .subsection {
+            margin-bottom: 25px;
+        }
+        .subsection-title {
+            font-size: 1.3em;
+            color: #444;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        .info-item {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 3px solid #0078D4;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #666;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+        .info-value {
+            color: #333;
+            font-size: 1.1em;
+            word-break: break-word;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #0078D4;
+            color: white;
+            font-weight: 600;
+        }
+        tr:hover { background: #f5f5f5; }
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+        .badge-danger { background: #f8d7da; color: #721c24; }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            border-left: 5px solid;
+        }
+        .alert-success { background: #d4edda; border-color: #28a745; color: #155724; }
+        .alert-warning { background: #fff3cd; border-color: #ffc107; color: #856404; }
+        .alert-danger { background: #f8d7da; border-color: #dc3545; color: #721c24; }
+        .alert-info { background: #d1ecf1; border-color: #17a2b8; color: #0c5460; }
+        .footer {
+            background: #005A9E;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        @media print {
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ Windows Security Report</h1>
+            <div class="meta">
+                <strong>{{ inventory_hostname }}</strong><br>
+                {{ ansible_distribution }} {{ ansible_distribution_version }}<br>
+                Generated: {{ ansible_date_time.date }} {{ ansible_date_time.time }}
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- System Summary -->
+            <div class="section">
+                <h2 class="section-title">💻 System Information</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Hostname</div>
+                        <div class="info-value">{{ ansible_hostname }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Operating System</div>
+                        <div class="info-value">{{ ansible_distribution }} {{ ansible_distribution_version }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Architecture</div>
+                        <div class="info-value">{{ ansible_architecture }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">IP Address</div>
+                        <div class="info-value">{{ ansible_default_ipv4.address | default('N/A') }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Memory</div>
+                        <div class="info-value">{{ ansible_memtotal_mb }} MB</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">CPU Cores</div>
+                        <div class="info-value">{{ ansible_processor_cores }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Windows Updates -->
+            <div class="section">
+                <h2 class="section-title">🔄 Windows Updates</h2>
+                {% if windows_updates is defined %}
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Total Pending Updates</div>
+                        <div class="info-value">{{ windows_updates.TotalUpdates }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Security Updates</div>
+                        <div class="info-value">
+                            {% if windows_updates.SecurityUpdates | int > 0 %}
+                            <span class="badge badge-warning">{{ windows_updates.SecurityUpdates }} updates</span>
+                            {% else %}
+                            <span class="badge badge-success">Up to date</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Critical Updates</div>
+                        <div class="info-value">
+                            {% if windows_updates.CriticalUpdates | int > 0 %}
+                            <span class="badge badge-danger">{{ windows_updates.CriticalUpdates }} critical</span>
+                            {% else %}
+                            <span class="badge badge-success">None</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Important Updates</div>
+                        <div class="info-value">
+                            {% if windows_updates.ImportantUpdates | int > 0 %}
+                            <span class="badge badge-warning">{{ windows_updates.ImportantUpdates }} important</span>
+                            {% else %}
+                            <span class="badge badge-success">None</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-info">Unable to check for Windows updates</div>
+                {% endif %}
+            </div>
+
+            <!-- Network Security -->
+            <div class="section">
+                <h2 class="section-title">🌐 Network Security</h2>
+                
+                <div class="subsection">
+                    <h3 class="subsection-title">Listening TCP Ports</h3>
+                    {% if listening_ports %}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Port</th>
+                                <th>Address</th>
+                                <th>Process</th>
+                                <th>PID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for port in listening_ports[:20] %}
+                            <tr>
+                                <td><strong>{{ port.LocalPort }}</strong></td>
+                                <td>{{ port.LocalAddress }}</td>
+                                <td>{{ port.ProcessName | default('N/A') }}</td>
+                                <td>{{ port.OwningProcess }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="alert alert-info">No listening ports found</div>
+                    {% endif %}
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">⚠️ Potentially Vulnerable Services</h3>
+                    {% if vulnerable_ports %}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Port</th>
+                                <th>Service</th>
+                                <th>Process</th>
+                                <th>Risk</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for port in vulnerable_ports %}
+                            <tr>
+                                <td><strong>{{ port.LocalPort }}</strong></td>
+                                <td>
+                                    {% if port.LocalPort == 21 %}FTP
+                                    {% elif port.LocalPort == 23 %}Telnet
+                                    {% elif port.LocalPort == 3389 %}RDP
+                                    {% elif port.LocalPort == 445 %}SMB
+                                    {% elif port.LocalPort == 135 %}RPC
+                                    {% else %}Unknown
+                                    {% endif %}
+                                </td>
+                                <td>{{ port.ProcessName | default('N/A') }}</td>
+                                <td><span class="badge badge-warning">Exposed</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="alert alert-success">✅ No common vulnerable services detected</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- User Security -->
+            <div class="section">
+                <h2 class="section-title">👥 User Security</h2>
+                
+                <div class="subsection">
+                    <h3 class="subsection-title">Local Administrators</h3>
+                    {% if admin_users %}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Source</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in admin_users %}
+                            <tr>
+                                <td><strong>{{ user.Name }}</strong></td>
+                                <td>{{ user.ObjectClass }}</td>
+                                <td>{{ user.PrincipalSource }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% endif %}
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">⚠️ Security Concerns</h3>
+                    {% if never_expire_users %}
+                    <div class="alert alert-warning">
+                        <strong>Passwords Never Expire:</strong> {{ never_expire_users | length }} user(s)
+                    </div>
+                    {% endif %}
+                    {% if inactive_users %}
+                    <div class="alert alert-warning">
+                        <strong>Inactive Users (90+ days):</strong> {{ inactive_users | length }} user(s)
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- RDP Configuration -->
+            <div class="section">
+                <h2 class="section-title">🖥️ Remote Desktop (RDP) Configuration</h2>
+                {% if rdp_status is defined %}
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">RDP Status</div>
+                        <div class="info-value">
+                            {% if rdp_status.Enabled == "Yes" %}
+                            <span class="badge badge-info">Enabled</span>
+                            {% else %}
+                            <span class="badge badge-success">Disabled</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if rdp_port is defined %}
+                    <div class="info-item">
+                        <div class="info-label">RDP Port</div>
+                        <div class="info-value">{{ rdp_port.Port }} {{ rdp_port.IsDefault }}</div>
+                    </div>
+                    {% endif %}
+                    {% if rdp_nla is defined %}
+                    <div class="info-item">
+                        <div class="info-label">Network Level Authentication</div>
+                        <div class="info-value">
+                            {% if rdp_nla.Enabled == "Yes" %}
+                            <span class="badge badge-success">Enabled ✅</span>
+                            {% else %}
+                            <span class="badge badge-danger">Disabled ⚠️</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if rdp_encryption is defined %}
+                    <div class="info-item">
+                        <div class="info-label">Encryption Level</div>
+                        <div class="info-value">{{ rdp_encryption.Description }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Windows Firewall -->
+            <div class="section">
+                <h2 class="section-title">🔥 Windows Firewall</h2>
+                {% if firewall_status is defined %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Profile</th>
+                            <th>Status</th>
+                            <th>Inbound Default</th>
+                            <th>Outbound Default</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for profile in firewall_status %}
+                        <tr>
+                            <td><strong>{{ profile.Profile }}</strong></td>
+                            <td>
+                                {% if profile.Enabled %}
+                                <span class="badge badge-success">Active</span>
+                                {% else %}
+                                <span class="badge badge-danger">Disabled</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ profile.DefaultInboundAction }}</td>
+                            <td>{{ profile.DefaultOutboundAction }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+            </div>
+
+            <!-- Antivirus -->
+            <div class="section">
+                <h2 class="section-title">🛡️ Antivirus Protection</h2>
+                {% if defender_status is defined %}
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Antivirus Status</div>
+                        <div class="info-value">
+                            {% if defender_status.AntivirusEnabled %}
+                            <span class="badge badge-success">Enabled</span>
+                            {% else %}
+                            <span class="badge badge-danger">Disabled</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Real-Time Protection</div>
+                        <div class="info-value">
+                            {% if defender_status.RealTimeProtectionEnabled %}
+                            <span class="badge badge-success">Active</span>
+                            {% else %}
+                            <span class="badge badge-danger">Inactive</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Last Signature Update</div>
+                        <div class="info-value">{{ defender_status.AntivirusSignatureLastUpdated | default('N/A') }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Defender Version</div>
+                        <div class="info-value">{{ defender_status.DefenderVersion | default('N/A') }}</div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- File System Security -->
+            <div class="section">
+                <h2 class="section-title">📁 File System Security</h2>
+                
+                {% if writable_directories %}
+                <div class="subsection">
+                    <h3 class="subsection-title">⚠️ Writable System Directories</h3>
+                    <div class="alert alert-warning">
+                        Found {{ writable_directories | length }} system directories writable by users
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-success">✅ No writable system directories found</div>
+                {% endif %}
+
+                {% if startup_programs %}
+                <div class="subsection">
+                    <h3 class="subsection-title">Startup Programs</h3>
+                    <p>{{ startup_programs | length }} program(s) configured to run at startup</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Windows Security Report | Generated {{ ansible_date_time.iso8601 }}</p>
+            <p>{{ inventory_hostname }}</p>
+        </div>
+    </div>
+</body>
+</html>

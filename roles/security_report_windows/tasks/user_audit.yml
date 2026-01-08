@@ -1,0 +1,70 @@
+---
+# roles/security_report_windows/tasks/user_audit.yml
+- name: List local administrators
+  win_shell: |
+    Get-LocalGroupMember -Group "Administrators" |
+    Select-Object Name, ObjectClass, PrincipalSource |
+    ConvertTo-Json
+  register: admin_users_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse admin users
+  set_fact:
+    admin_users: "{{ admin_users_raw.stdout | from_json if admin_users_raw.stdout | length > 0 else [] }}"
+
+- name: List all local users
+  win_shell: |
+    Get-LocalUser |
+    Select-Object Name, Enabled, PasswordRequired, PasswordLastSet, LastLogon, Description |
+    ConvertTo-Json
+  register: local_users_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse local users
+  set_fact:
+    local_users: "{{ local_users_raw.stdout | from_json if local_users_raw.stdout | length > 0 else [] }}"
+
+- name: Check for users with passwords that never expire
+  win_shell: |
+    Get-LocalUser |
+    Where-Object { $_.PasswordNeverExpires -eq $true -and $_.Enabled -eq $true } |
+    Select-Object Name, PasswordLastSet, PasswordNeverExpires |
+    ConvertTo-Json
+  register: never_expire_users_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse users with non-expiring passwords
+  set_fact:
+    never_expire_users: "{{ never_expire_users_raw.stdout | from_json if never_expire_users_raw.stdout | length > 0 else [] }}"
+
+- name: Check for disabled accounts
+  win_shell: |
+    Get-LocalUser |
+    Where-Object { $_.Enabled -eq $false } |
+    Select-Object Name, LastLogon, Description |
+    ConvertTo-Json
+  register: disabled_users_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse disabled users
+  set_fact:
+    disabled_users: "{{ disabled_users_raw.stdout | from_json if disabled_users_raw.stdout | length > 0 else [] }}"
+
+- name: Check for inactive users (no login for 90+ days)
+  win_shell: |
+    $threshold = (Get-Date).AddDays(-90)
+    Get-LocalUser |
+    Where-Object { $_.LastLogon -lt $threshold -and $_.Enabled -eq $true } |
+    Select-Object Name, LastLogon, PasswordLastSet |
+    ConvertTo-Json
+  register: inactive_users_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse inactive users
+  set_fact:
+    inactive_users: "{{ inactive_users_raw.stdout | from_json if inactive_users_raw.stdout | length > 0 else [] }}"

@@ -1,0 +1,24 @@
+galaxy_info:
+  author: A&ECoding
+  description: Generate comprehensive Security Reporting for Windows Server from Ansible Role
+  company: A&ECoding
+  
+  license: MIT
+  
+  min_ansible_version: "2.10"
+  
+  platforms:
+    - name: Windows
+      versions:
+        - all
+  
+  galaxy_tags:
+    - inventory
+    - documentation
+    - reporting
+    - facts
+    - system
+    - audit
+    - monitoring
+
+dependencies: []

@@ -1,0 +1,54 @@
+{
+  "report_metadata": {
+    "generated_at": "{{ ansible_date_time.iso8601 }}",
+    "hostname": "{{ inventory_hostname }}",
+    "os": "{{ ansible_os_family }}",
+    "os_version": "{{ ansible_distribution }} {{ ansible_distribution_version }}",
+    "report_type": "Windows Security Report"
+  },
+  "windows_updates": {{ windows_updates | default({}) | to_json }},
+  "network_security": {
+    "listening_ports": {{ listening_ports | default([]) | to_json }},
+    "vulnerable_ports": {{ vulnerable_ports | default([]) | to_json }},
+    "udp_ports": {{ udp_ports | default([]) | to_json }}
+  },
+  "user_security": {
+    "admin_users": {{ admin_users | default([]) | to_json }},
+    "local_users": {{ local_users | default([]) | to_json }},
+    "never_expire_users": {{ never_expire_users | default([]) | to_json }},
+    "disabled_users": {{ disabled_users | default([]) | to_json }},
+    "inactive_users": {{ inactive_users | default([]) | to_json }}
+  },
+  "rdp_configuration": {
+    "status": {{ rdp_status | default({}) | to_json }},
+    "port": {{ rdp_port | default({}) | to_json }},
+    "nla": {{ rdp_nla | default({}) | to_json }},
+    "encryption": {{ rdp_encryption | default({}) | to_json }}
+  },
+  "file_system_security": {
+    "writable_directories": {{ writable_directories | default([]) | to_json }},
+    "startup_programs": {{ startup_programs | default([]) | to_json }},
+    "scheduled_tasks": {{ scheduled_tasks | default([]) | to_json }}
+  },
+  "firewall": {
+    "status": {{ firewall_status | default([]) | to_json }},
+    "inbound_rules": {{ firewall_rules_inbound | default([]) | to_json }},
+    "disabled_profiles": {{ disabled_firewall | default([]) | to_json }}
+  },
+  "antivirus": {
+    "defender_status": {{ defender_status | default({}) | to_json }},
+    "recent_threats": {{ recent_threats | default([]) | to_json }},
+    "third_party_av": {{ third_party_av | default([]) | to_json }},
+    "exclusions": {{ defender_exclusions | default({}) | to_json }}
+  },
+  "system_info": {
+    "hostname": "{{ ansible_hostname }}",
+    "fqdn": "{{ ansible_fqdn }}",
+    "ip_address": "{{ ansible_default_ipv4.address | default('N/A') }}",
+    "os_family": "{{ ansible_os_family }}",
+    "os_version": "{{ ansible_distribution_version }}",
+    "architecture": "{{ ansible_architecture }}",
+    "processor_cores": "{{ ansible_processor_cores }}",
+    "memory_mb": "{{ ansible_memtotal_mb }}"
+  }
+}

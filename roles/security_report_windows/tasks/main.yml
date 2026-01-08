@@ -1,0 +1,54 @@
+---
+# tasks file for security_report_windows
+- name: Create report directory
+  file:
+    path: "{{ report_dir }}/{{ inventory_hostname }}"
+    state: directory
+    mode: '0755'
+  delegate_to: localhost
+  connection: local
+  run_once: true
+  become: no
+
+- name: Gather system information
+  setup:
+    gather_subset: all
+
+- name: Check for Windows security updates
+  include_tasks: security_updates.yml
+
+- name: Scan open ports
+  include_tasks: port_scan.yml
+
+- name: Check user accounts and permissions
+  include_tasks: user_audit.yml
+
+- name: Verify RDP configuration
+  include_tasks: rdp_audit.yml
+
+- name: Check file permissions on critical directories
+  include_tasks: file_permissions.yml
+
+- name: Check Windows Firewall status
+  include_tasks: firewall_check.yml
+  when: security_scan_firewall | default(true)
+
+- name: Check Antivirus status
+  include_tasks: antivirus_check.yml
+  when: security_scan_antivirus | default(true)
+
+- name: Generate HTML report
+  template:
+    src: security_report_windows.html.j2
+    dest: "{{ report_dir }}/{{ inventory_hostname }}/security_report_{{ ansible_date_time.date }}.html"
+  delegate_to: localhost
+  connection: local
+  become: no
+
+- name: Generate JSON summary
+  template:
+    src: security_summary_windows.json.j2
+    dest: "{{ report_dir }}/{{ inventory_hostname }}/security_summary_{{ ansible_date_time.date }}.json"
+  delegate_to: localhost
+  connection: local
+  become: no

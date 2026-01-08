@@ -1,0 +1,74 @@
+---
+# roles/security_report_windows/tasks/rdp_audit.yml
+- name: Check RDP status
+  win_shell: |
+    $rdpEnabled = (Get-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections").fDenyTSConnections
+    @{
+      Enabled = if ($rdpEnabled -eq 0) { "Yes" } else { "No" }
+      Status = if ($rdpEnabled -eq 0) { "RDP is enabled" } else { "RDP is disabled" }
+    } | ConvertTo-Json
+  register: rdp_status_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse RDP status
+  set_fact:
+    rdp_status: "{{ rdp_status_raw.stdout | from_json }}"
+  when: rdp_status_raw.rc == 0
+
+- name: Check RDP port
+  win_shell: |
+    $rdpPort = (Get-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -Name "PortNumber").PortNumber
+    @{
+      Port = $rdpPort
+      IsDefault = if ($rdpPort -eq 3389) { "Yes" } else { "No (Custom: $rdpPort)" }
+    } | ConvertTo-Json
+  register: rdp_port_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse RDP port
+  set_fact:
+    rdp_port: "{{ rdp_port_raw.stdout | from_json }}"
+  when: rdp_port_raw.rc == 0
+
+- name: Check Network Level Authentication (NLA)
+  win_shell: |
+    $nla = (Get-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -Name "UserAuthentication").UserAuthentication
+    @{
+      Enabled = if ($nla -eq 1) { "Yes" } else { "No" }
+      Status = if ($nla -eq 1) { "NLA is enabled (Secure)" } else { "NLA is disabled (Insecure)" }
+      Recommendation = if ($nla -eq 1) { "Good" } else { "Enable NLA for better security" }
+    } | ConvertTo-Json
+  register: rdp_nla_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse NLA status
+  set_fact:
+    rdp_nla: "{{ rdp_nla_raw.stdout | from_json }}"
+  when: rdp_nla_raw.rc == 0
+
+- name: Check RDP encryption level
+  win_shell: |
+    $encLevel = (Get-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -Name "MinEncryptionLevel" -ErrorAction SilentlyContinue).MinEncryptionLevel
+    $encLevelText = switch ($encLevel) {
+      1 { "Low" }
+      2 { "Client Compatible" }
+      3 { "High" }
+      4 { "FIPS Compliant" }
+      default { "Unknown" }
+    }
+    @{
+      Level = $encLevel
+      Description = $encLevelText
+      Secure = if ($encLevel -ge 3) { "Yes" } else { "No - Increase to High or FIPS" }
+    } | ConvertTo-Json
+  register: rdp_encryption_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse RDP encryption
+  set_fact:
+    rdp_encryption: "{{ rdp_encryption_raw.stdout | from_json }}"
+  when: rdp_encryption_raw.rc == 0

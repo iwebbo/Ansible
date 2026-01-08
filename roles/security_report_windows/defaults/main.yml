@@ -1,0 +1,5 @@
+---
+# defaults file for security_report
+report_dir: "security_reports"
+security_scan_antivirus: true
+security_scan_firewall: true

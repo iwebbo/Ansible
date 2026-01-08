@@ -1,0 +1,47 @@
+---
+# roles/security_report_windows/tasks/port_scan.yml
+- name: Get listening TCP ports
+  win_shell: |
+    Get-NetTCPConnection -State Listen | 
+    Select-Object LocalAddress, LocalPort, OwningProcess, 
+    @{Name='ProcessName';Expression={(Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue).ProcessName}} |
+    Sort-Object LocalPort | 
+    ConvertTo-Json
+  register: listening_ports_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse listening ports
+  set_fact:
+    listening_ports: "{{ listening_ports_raw.stdout | from_json if listening_ports_raw.stdout | length > 0 else [] }}"
+
+- name: Check for common vulnerable services
+  win_shell: |
+    $vulnerablePorts = @(21, 23, 80, 135, 139, 445, 1433, 3389, 5432, 5900)
+    Get-NetTCPConnection -State Listen | 
+    Where-Object { $vulnerablePorts -contains $_.LocalPort } |
+    Select-Object LocalAddress, LocalPort, OwningProcess,
+    @{Name='ProcessName';Expression={(Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue).ProcessName}} |
+    ConvertTo-Json
+  register: vulnerable_ports_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse vulnerable ports
+  set_fact:
+    vulnerable_ports: "{{ vulnerable_ports_raw.stdout | from_json if vulnerable_ports_raw.stdout | length > 0 else [] }}"
+
+- name: Get UDP listening ports
+  win_shell: |
+    Get-NetUDPEndpoint |
+    Select-Object LocalAddress, LocalPort, OwningProcess,
+    @{Name='ProcessName';Expression={(Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue).ProcessName}} |
+    Sort-Object LocalPort |
+    ConvertTo-Json
+  register: udp_ports_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse UDP ports
+  set_fact:
+    udp_ports: "{{ udp_ports_raw.stdout | from_json if udp_ports_raw.stdout | length > 0 else [] }}"

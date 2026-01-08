@@ -1,0 +1,74 @@
+---
+# roles/security_report_windows/tasks/antivirus_check.yml
+- name: Check Windows Defender status
+  win_shell: |
+    $defender = Get-MpComputerStatus
+    @{
+      AntivirusEnabled = $defender.AntivirusEnabled
+      AntispywareEnabled = $defender.AntispywareEnabled
+      RealTimeProtectionEnabled = $defender.RealTimeProtectionEnabled
+      OnAccessProtectionEnabled = $defender.OnAccessProtectionEnabled
+      BehaviorMonitorEnabled = $defender.BehaviorMonitorEnabled
+      IoavProtectionEnabled = $defender.IoavProtectionEnabled
+      AntivirusSignatureLastUpdated = $defender.AntivirusSignatureLastUpdated
+      QuickScanAge = $defender.QuickScanAge
+      FullScanAge = $defender.FullScanAge
+      DefenderVersion = $defender.AMProductVersion
+    } | ConvertTo-Json
+  register: defender_status_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse Defender status
+  set_fact:
+    defender_status: "{{ defender_status_raw.stdout | from_json }}"
+  when: defender_status_raw.rc == 0
+
+- name: Set default Defender status if check failed
+  set_fact:
+    defender_status:
+      AntivirusEnabled: "N/A"
+      Status: "Unable to check Windows Defender status"
+  when: defender_status_raw.rc != 0
+
+- name: Check for recent threats
+  win_shell: |
+    Get-MpThreatDetection | 
+    Select-Object -First 10 ThreatName, Resources, ProcessName, InitialDetectionTime, RemediationTime |
+    ConvertTo-Json
+  register: recent_threats_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse recent threats
+  set_fact:
+    recent_threats: "{{ recent_threats_raw.stdout | from_json if recent_threats_raw.stdout | length > 0 else [] }}"
+
+- name: Check third-party antivirus
+  win_shell: |
+    $av = Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntiVirusProduct
+    $av | Select-Object displayName, productState, timestamp | ConvertTo-Json
+  register: third_party_av_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse third-party antivirus
+  set_fact:
+    third_party_av: "{{ third_party_av_raw.stdout | from_json if third_party_av_raw.stdout | length > 0 else [] }}"
+
+- name: Check Defender exclusions
+  win_shell: |
+    $prefs = Get-MpPreference
+    @{
+      ExclusionPath = $prefs.ExclusionPath
+      ExclusionExtension = $prefs.ExclusionExtension
+      ExclusionProcess = $prefs.ExclusionProcess
+    } | ConvertTo-Json
+  register: defender_exclusions_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse Defender exclusions
+  set_fact:
+    defender_exclusions: "{{ defender_exclusions_raw.stdout | from_json }}"
+  when: defender_exclusions_raw.rc == 0

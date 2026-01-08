@@ -1,0 +1,42 @@
+---
+# roles/security_report_windows/tasks/security_updates.yml
+- name: Check for pending Windows updates
+  win_shell: |
+    $UpdateSession = New-Object -ComObject Microsoft.Update.Session
+    $UpdateSearcher = $UpdateSession.CreateUpdateSearcher()
+    $SearchResult = $UpdateSearcher.Search("IsInstalled=0 and Type='Software'")
+    $SecurityUpdates = $SearchResult.Updates | Where-Object { $_.MsrcSeverity -in @('Critical', 'Important') }
+    @{
+      TotalUpdates = $SearchResult.Updates.Count
+      SecurityUpdates = $SecurityUpdates.Count
+      CriticalUpdates = ($SecurityUpdates | Where-Object { $_.MsrcSeverity -eq 'Critical' }).Count
+      ImportantUpdates = ($SecurityUpdates | Where-Object { $_.MsrcSeverity -eq 'Important' }).Count
+    } | ConvertTo-Json
+  register: windows_updates_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse Windows updates result
+  set_fact:
+    windows_updates: "{{ windows_updates_raw.stdout | from_json }}"
+  when: windows_updates_raw.rc == 0 and windows_updates_raw.stdout | length > 0
+
+- name: Set default if updates check failed
+  set_fact:
+    windows_updates:
+      TotalUpdates: "N/A"
+      SecurityUpdates: "N/A"
+      CriticalUpdates: "N/A"
+      ImportantUpdates: "N/A"
+  when: windows_updates_raw.rc != 0 or windows_updates_raw.stdout | length == 0
+
+- name: List pending security updates
+  win_shell: |
+    $UpdateSession = New-Object -ComObject Microsoft.Update.Session
+    $UpdateSearcher = $UpdateSession.CreateUpdateSearcher()
+    $SearchResult = $UpdateSearcher.Search("IsInstalled=0 and Type='Software'")
+    $SecurityUpdates = $SearchResult.Updates | Where-Object { $_.MsrcSeverity -in @('Critical', 'Important') }
+    $SecurityUpdates | Select-Object Title, MsrcSeverity, Description | ConvertTo-Json
+  register: windows_security_updates_list
+  changed_when: false
+  failed_when: false

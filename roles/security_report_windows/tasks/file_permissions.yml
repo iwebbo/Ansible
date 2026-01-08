@@ -1,0 +1,78 @@
+---
+# roles/security_report_windows/tasks/file_permissions.yml
+- name: Check writable system directories
+  win_shell: |
+    $paths = @("C:\Windows\System32", "C:\Windows", "C:\Program Files")
+    $results = @()
+    foreach ($path in $paths) {
+      $acl = Get-Acl $path -ErrorAction SilentlyContinue
+      if ($acl) {
+        $writableByUsers = $acl.Access | Where-Object { 
+          $_.IdentityReference -match "Users|Everyone" -and 
+          $_.FileSystemRights -match "Write|FullControl|Modify"
+        }
+        if ($writableByUsers) {
+          $results += @{
+            Path = $path
+            Writable = "Yes"
+            Issue = "Writable by Users/Everyone - Security Risk"
+          }
+        }
+      }
+    }
+    $results | ConvertTo-Json
+  register: writable_directories_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse writable directories
+  set_fact:
+    writable_directories: "{{ writable_directories_raw.stdout | from_json if writable_directories_raw.stdout | length > 0 else [] }}"
+
+- name: Check startup programs
+  win_shell: |
+    $startupPaths = @(
+      "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
+      "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
+      "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
+      "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce"
+    )
+    $results = @()
+    foreach ($path in $startupPaths) {
+      if (Test-Path $path) {
+        $items = Get-ItemProperty $path -ErrorAction SilentlyContinue
+        if ($items) {
+          $items.PSObject.Properties | Where-Object { $_.Name -notmatch "^PS" } | ForEach-Object {
+            $results += @{
+              Location = $path
+              Name = $_.Name
+              Command = $_.Value
+            }
+          }
+        }
+      }
+    }
+    $results | ConvertTo-Json
+  register: startup_programs_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse startup programs
+  set_fact:
+    startup_programs: "{{ startup_programs_raw.stdout | from_json if startup_programs_raw.stdout | length > 0 else [] }}"
+
+- name: Check scheduled tasks
+  win_shell: |
+    Get-ScheduledTask |
+    Where-Object { $_.State -eq "Ready" -and $_.Principal.UserId -ne "SYSTEM" } |
+    Select-Object TaskName, TaskPath, State, 
+    @{Name='RunAsUser';Expression={$_.Principal.UserId}},
+    @{Name='LastRunTime';Expression={$_.LastRunTime}} |
+    ConvertTo-Json
+  register: scheduled_tasks_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse scheduled tasks
+  set_fact:
+    scheduled_tasks: "{{ scheduled_tasks_raw.stdout | from_json if scheduled_tasks_raw.stdout | length > 0 else [] }}"

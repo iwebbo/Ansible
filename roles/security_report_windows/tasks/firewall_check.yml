@@ -1,0 +1,55 @@
+---
+# roles/security_report_windows/tasks/firewall_check.yml
+- name: Check Windows Firewall status
+  win_shell: |
+    $profiles = @("Domain", "Private", "Public")
+    $results = @()
+    foreach ($profile in $profiles) {
+      $status = Get-NetFirewallProfile -Name $profile
+      $results += @{
+        Profile = $profile
+        Enabled = $status.Enabled
+        DefaultInboundAction = $status.DefaultInboundAction
+        DefaultOutboundAction = $status.DefaultOutboundAction
+        Status = if ($status.Enabled) { "Active" } else { "Disabled - Security Risk!" }
+      }
+    }
+    $results | ConvertTo-Json
+  register: firewall_status_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse firewall status
+  set_fact:
+    firewall_status: "{{ firewall_status_raw.stdout | from_json }}"
+
+- name: List firewall rules (inbound)
+  win_shell: |
+    Get-NetFirewallRule -Direction Inbound -Enabled True |
+    Select-Object Name, DisplayName, Enabled, Direction, Action, Profile |
+    Sort-Object DisplayName |
+    Select-Object -First 50 |
+    ConvertTo-Json
+  register: firewall_rules_inbound_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse inbound firewall rules
+  set_fact:
+    firewall_rules_inbound: "{{ firewall_rules_inbound_raw.stdout | from_json if firewall_rules_inbound_raw.stdout | length > 0 else [] }}"
+
+- name: Check for disabled firewall profiles
+  win_shell: |
+    $disabled = Get-NetFirewallProfile | Where-Object { -not $_.Enabled }
+    if ($disabled) {
+      $disabled | Select-Object Name, Enabled | ConvertTo-Json
+    } else {
+      @() | ConvertTo-Json
+    }
+  register: disabled_firewall_raw
+  changed_when: false
+  failed_when: false
+
+- name: Parse disabled firewall profiles
+  set_fact:
+    disabled_firewall: "{{ disabled_firewall_raw.stdout | from_json if disabled_firewall_raw.stdout | length > 0 else [] }}"
