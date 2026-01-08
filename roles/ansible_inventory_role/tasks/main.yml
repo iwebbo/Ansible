@@ -1,0 +1,155 @@
+---
+# tasks file for ansible_inventory
+- name: Create report directory
+  file:
+    path: "{{ inventory_report_dir }}/{{ inventory_hostname }}"
+    state: directory
+    mode: '0755'
+  delegate_to: localhost
+  connection: local
+  run_once: true
+  become: no
+
+- name: Gather all facts
+  setup:
+    gather_subset: all
+  when: inventory_gather_facts | default(true)
+
+- name: Collect magic variables
+  set_fact:
+    magic_vars:
+      inventory_hostname: "{{ inventory_hostname }}"
+      inventory_hostname_short: "{{ inventory_hostname_short }}"
+      inventory_file: "{{ inventory_file | default('N/A') }}"
+      inventory_dir: "{{ inventory_dir | default('N/A') }}"
+      group_names: "{{ group_names }}"
+      groups: "{{ groups }}"
+      ansible_play_hosts: "{{ ansible_play_hosts }}"
+      ansible_play_batch: "{{ ansible_play_batch }}"
+      ansible_version: "{{ ansible_version }}"
+      ansible_playbook_python: "{{ ansible_playbook_python | default('N/A') }}"
+      playbook_dir: "{{ playbook_dir | default('N/A') }}"
+      role_path: "{{ role_path | default('N/A') }}"
+      ansible_check_mode: "{{ ansible_check_mode }}"
+      ansible_diff_mode: "{{ ansible_diff_mode }}"
+      ansible_verbosity: "{{ ansible_verbosity }}"
+
+- name: Collect connection variables
+  set_fact:
+    connection_vars:
+      ansible_host: "{{ ansible_host | default(inventory_hostname) }}"
+      ansible_port: "{{ ansible_port | default('22') }}"
+      ansible_user: "{{ ansible_user | default(ansible_env.USER) }}"
+      ansible_connection: "{{ ansible_connection | default('ssh') }}"
+      ansible_become: "{{ ansible_become | default(false) }}"
+      ansible_become_user: "{{ ansible_become_user | default('root') }}"
+      ansible_become_method: "{{ ansible_become_method | default('sudo') }}"
+
+- name: Collect system facts
+  set_fact:
+    system_facts:
+      ansible_hostname: "{{ ansible_hostname | default('N/A') }}"
+      ansible_fqdn: "{{ ansible_fqdn | default('N/A') }}"
+      ansible_domain: "{{ ansible_domain | default('N/A') }}"
+      ansible_nodename: "{{ ansible_nodename | default('N/A') }}"
+      ansible_os_family: "{{ ansible_os_family | default('N/A') }}"
+      ansible_distribution: "{{ ansible_distribution | default('N/A') }}"
+      ansible_distribution_version: "{{ ansible_distribution_version | default('N/A') }}"
+      ansible_distribution_release: "{{ ansible_distribution_release | default('N/A') }}"
+      ansible_distribution_major_version: "{{ ansible_distribution_major_version | default('N/A') }}"
+      ansible_kernel: "{{ ansible_kernel | default('N/A') }}"
+      ansible_architecture: "{{ ansible_architecture | default('N/A') }}"
+      ansible_machine: "{{ ansible_machine | default('N/A') }}"
+      ansible_python_version: "{{ ansible_python_version | default('N/A') }}"
+      ansible_processor_cores: "{{ ansible_processor_cores | default('N/A') }}"
+      ansible_processor_count: "{{ ansible_processor_count | default('N/A') }}"
+      ansible_processor_vcpus: "{{ ansible_processor_vcpus | default('N/A') }}"
+      ansible_memtotal_mb: "{{ ansible_memtotal_mb | default('N/A') }}"
+      ansible_memfree_mb: "{{ ansible_memfree_mb | default('N/A') }}"
+      ansible_swaptotal_mb: "{{ ansible_swaptotal_mb | default('N/A') }}"
+      ansible_uptime_seconds: "{{ ansible_uptime_seconds | default('N/A') }}"
+
+- name: Collect network facts
+  set_fact:
+    network_facts:
+      ansible_default_ipv4: "{{ ansible_default_ipv4 | default({}) }}"
+      ansible_default_ipv6: "{{ ansible_default_ipv6 | default({}) }}"
+      ansible_all_ipv4_addresses: "{{ ansible_all_ipv4_addresses | default([]) }}"
+      ansible_all_ipv6_addresses: "{{ ansible_all_ipv6_addresses | default([]) }}"
+      ansible_interfaces: "{{ ansible_interfaces | default([]) }}"
+      ansible_dns: "{{ ansible_dns | default({}) }}"
+
+- name: Collect date/time variables
+  set_fact:
+    datetime_vars:
+      ansible_date_time: "{{ ansible_date_time | default({}) }}"
+
+- name: Collect environment variables
+  set_fact:
+    env_vars: "{{ ansible_env | default({}) }}"
+  when: inventory_include_environment | default(true)
+
+- name: Get all host variables
+  set_fact:
+    all_hostvars: "{{ hostvars[inventory_hostname] }}"
+
+- name: Generate HTML inventory report
+  template:
+    src: ansible_inventory.html.j2
+    dest: "{{ inventory_report_dir }}/{{ inventory_hostname }}/ansible_inventory_{{ ansible_date_time.date }}.html"
+  delegate_to: localhost
+  connection: local
+  become: no
+
+- name: Generate JSON inventory report
+  template:
+    src: ansible_inventory.json.j2
+    dest: "{{ inventory_report_dir }}/{{ inventory_hostname }}/ansible_inventory_{{ ansible_date_time.date }}.json"
+  delegate_to: localhost
+  connection: local
+  become: no
+
+- name: Generate summary report
+  copy:
+    content: |
+      ========================================
+      ANSIBLE INVENTORY REPORT
+      ========================================
+      Host: {{ inventory_hostname }}
+      Generated: {{ ansible_date_time.iso8601 }}
+      
+      === SYSTEM INFO ===
+      OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+      Kernel: {{ ansible_kernel }}
+      Architecture: {{ ansible_architecture }}
+      Python: {{ ansible_python_version }}
+      
+      === HARDWARE ===
+      CPU Cores: {{ ansible_processor_cores }}
+      vCPUs: {{ ansible_processor_vcpus }}
+      Memory: {{ ansible_memtotal_mb }} MB
+      
+      === NETWORK ===
+      Primary IP: {{ ansible_default_ipv4.address | default('N/A') }}
+      FQDN: {{ ansible_fqdn }}
+      
+      === ANSIBLE ===
+      Ansible Version: {{ ansible_version.full }}
+      Connection: {{ ansible_connection }}
+      User: {{ ansible_user }}
+      
+      Reports disponibles:
+      - HTML: {{ inventory_report_dir }}/{{ inventory_hostname }}/ansible_inventory_{{ ansible_date_time.date }}.html
+      - JSON: {{ inventory_report_dir }}/{{ inventory_hostname }}/ansible_inventory_{{ ansible_date_time.date }}.json
+      ========================================
+    dest: "{{ inventory_report_dir }}/{{ inventory_hostname }}/summary.txt"
+  delegate_to: localhost
+  connection: local
+  become: no
+
+- name: Display summary
+  debug:
+    msg:
+      - "Inventory report generated for {{ inventory_hostname }}"
+      - "Location: {{ inventory_report_dir }}/{{ inventory_hostname }}/"
+      - "Files: ansible_inventory_{{ ansible_date_time.date }}.html|json"

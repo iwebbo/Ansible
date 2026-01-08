@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ansible Inventory Report - {{ inventory_hostname }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header .meta {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 25px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .section-title {
+            font-size: 1.8em;
+            color: #2a5298;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .subsection {
+            margin-bottom: 25px;
+        }
+        
+        .subsection-title {
+            font-size: 1.3em;
+            color: #444;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        
+        .info-item {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #666;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+        
+        .info-value {
+            color: #333;
+            font-size: 1.1em;
+            word-break: break-word;
+        }
+        
+        .code-block {
+            background: #1e1e1e;
+            color: #dcdcdc;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .list {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .list li {
+            background: white;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .footer {
+            background: #2a5298;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .collapsible {
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .collapsible:hover {
+            opacity: 0.8;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Ansible Inventory Report</h1>
+            <div class="meta">
+                <strong>{{ inventory_hostname }}</strong><br>
+                Généré le {{ ansible_date_time.date }} à {{ ansible_date_time.time }}<br>
+                Ansible {{ ansible_version.full }}
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Magic Variables -->
+            <div class="section">
+                <h2 class="section-title">🎯 Variables Magiques Ansible</h2>
+                <div class="info-grid">
+                    {% for key, value in magic_vars.items() %}
+                    <div class="info-item">
+                        <div class="info-label">{{ key }}</div>
+                        <div class="info-value">{{ value }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- System Information -->
+            <div class="section">
+                <h2 class="section-title">💻 Informations Système</h2>
+                <div class="info-grid">
+                    {% for key, value in system_facts.items() %}
+                    <div class="info-item">
+                        <div class="info-label">{{ key }}</div>
+                        <div class="info-value">{{ value }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Connection Variables -->
+            <div class="section">
+                <h2 class="section-title">🔌 Variables de Connexion</h2>
+                <div class="info-grid">
+                    {% for key, value in connection_vars.items() %}
+                    <div class="info-item">
+                        <div class="info-label">{{ key }}</div>
+                        <div class="info-value">{{ value }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Network Information -->
+            <div class="section">
+                <h2 class="section-title">🌐 Informations Réseau</h2>
+                
+                <div class="subsection">
+                    <h3 class="subsection-title">IPv4 par défaut</h3>
+                    {% if network_facts.ansible_default_ipv4 %}
+                    <div class="info-grid">
+                        {% for key, value in network_facts.ansible_default_ipv4.items() %}
+                        <div class="info-item">
+                            <div class="info-label">{{ key }}</div>
+                            <div class="info-value">{{ value }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p>Aucune information IPv4 disponible</p>
+                    {% endif %}
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Interfaces réseau</h3>
+                    <div>
+                        {% for interface in network_facts.ansible_interfaces %}
+                        <span class="badge badge-info">{{ interface }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Adresses IP</h3>
+                    <ul class="list">
+                        {% for ip in network_facts.ansible_all_ipv4_addresses %}
+                        <li>IPv4: {{ ip }}</li>
+                        {% endfor %}
+                        {% for ip in network_facts.ansible_all_ipv6_addresses %}
+                        <li>IPv6: {{ ip }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Groups -->
+            <div class="section">
+                <h2 class="section-title">👥 Groupes Ansible</h2>
+                <div class="subsection">
+                    <h3 class="subsection-title">Groupes de cet hôte</h3>
+                    <div>
+                        {% for group in magic_vars.group_names %}
+                        <span class="badge badge-success">{{ group }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Tous les groupes de l'inventaire</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Groupe</th>
+                                <th>Hôtes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for group, hosts in magic_vars.groups.items() %}
+                            <tr>
+                                <td><strong>{{ group }}</strong></td>
+                                <td>{{ hosts | join(', ') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Date Time -->
+            <div class="section">
+                <h2 class="section-title">🕐 Date et Heure</h2>
+                <div class="info-grid">
+                    {% for key, value in datetime_vars.ansible_date_time.items() %}
+                    <div class="info-item">
+                        <div class="info-label">{{ key }}</div>
+                        <div class="info-value">{{ value }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Environment Variables -->
+            {% if inventory_include_environment %}
+            <div class="section">
+                <h2 class="section-title">🔧 Variables d'Environnement</h2>
+                <div class="code-block">
+                    {% for key, value in env_vars.items() | sort %}
+{{ key }}={{ value }}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- All Host Variables (collapsed by default) -->
+            <div class="section">
+                <h2 class="section-title collapsible" onclick="toggleSection('all-vars')">
+                    📦 Toutes les Variables Hôte (cliquer pour afficher)
+                </h2>
+                <div id="all-vars" style="display: none;">
+                    <div class="code-block">
+{{ all_hostvars | to_nice_json }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Rapport généré par Ansible {{ ansible_version.full }}</p>
+            <p>{{ ansible_date_time.iso8601 }}</p>
+        </div>
+    </div>
+
+    <script>
+        function toggleSection(id) {
+            var element = document.getElementById(id);
+            if (element.style.display === 'none') {
+                element.style.display = 'block';
+            } else {
+                element.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

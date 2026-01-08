@@ -1,0 +1,5 @@
+---
+# defaults file for ansible_inventory
+inventory_report_dir: "inventory_reports"
+inventory_gather_facts: true
+inventory_include_environment: true

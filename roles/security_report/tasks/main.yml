@@ -6,7 +6,9 @@
     state: directory
     mode: '0755'
   delegate_to: localhost
-  run_once: false
+  connection: local
+  run_once: true
+  become: no
 
 - name: Gather system information
   setup:
@@ -37,9 +39,13 @@
     src: security_report.html.j2
     dest: "{{ report_dir }}/{{ inventory_hostname }}/security_report_{{ ansible_date_time.date }}.html"
   delegate_to: localhost
+  connection: local
+  become: no
 
 - name: Generate JSON summary
   template:
     src: security_summary.json.j2
     dest: "{{ report_dir }}/{{ inventory_hostname }}/security_summary_{{ ansible_date_time.date }}.json"
   delegate_to: localhost
+  connection: local
+  become: no

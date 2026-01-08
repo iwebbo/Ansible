@@ -1,0 +1,16 @@
+{
+  "report_metadata": {
+    "generated_at": "{{ ansible_date_time.iso8601 }}",
+    "generated_by": "Ansible {{ ansible_version.full }}",
+    "target_host": "{{ inventory_hostname }}"
+  },
+  "magic_variables": {{ magic_vars | to_nice_json }},
+  "connection_variables": {{ connection_vars | to_nice_json }},
+  "system_facts": {{ system_facts | to_nice_json }},
+  "network_facts": {{ network_facts | to_nice_json }},
+  "datetime": {{ datetime_vars | to_nice_json }},
+  {% if inventory_include_environment %}
+  "environment_variables": {{ env_vars | to_nice_json }},
+  {% endif %}
+  "all_host_variables": {{ all_hostvars | to_nice_json }}
+}
