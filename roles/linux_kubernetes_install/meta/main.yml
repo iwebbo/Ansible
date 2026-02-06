@@ -1,0 +1,42 @@
+# roles/kubernetes/meta/main.yml
+---
+galaxy_info:
+  role_name: kubernetes
+  author: AE&Coding
+  description: Install and configure Kubernetes cluster with containerd runtime
+  company: AE&Coding
+  
+  license: MIT
+  
+  min_ansible_version: "2.9"
+  
+  platforms:
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+        - noble
+  
+  galaxy_tags:
+    - kubernetes
+    - k8s
+    - containerd
+    - container
+    - orchestration
+    - cluster
+    - kubeadm
+    - kubectl
+    - kubelet
+    - cni
+    - flannel
+    - devops
+    - infrastructure
+    - automation
+
+dependencies: []
+
+allow_duplicates: false

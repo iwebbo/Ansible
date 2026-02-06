@@ -1,0 +1,73 @@
+---
+- name: Check if cluster is already initialized
+  stat:
+    path: /etc/kubernetes/admin.conf
+  register: k8s_admin_conf
+
+- name: Initialize Kubernetes cluster
+  command: >
+    kubeadm init
+    --apiserver-advertise-address={{ hostvars[groups['k8s_master'][0]]['ansible_default_ipv4']['address'] }}
+    --pod-network-cidr={{ k8s_pod_network_cidr }}
+  when: not k8s_admin_conf.stat.exists
+  register: kubeadm_init
+
+- name: Create .kube directory for root
+  file:
+    path: /root/.kube
+    state: directory
+    mode: '0755'
+
+- name: Create .kube directory for user
+  file:
+    path: "{{ ansible_env.HOME }}/.kube"
+    state: directory
+    mode: '0755'
+
+- name: Copy admin.conf to root kube config
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /root/.kube/config
+    remote_src: yes
+    mode: '0600'
+
+- name: Copy admin.conf to user kube config
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "{{ ansible_env.HOME }}/.kube/config"
+    remote_src: yes
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_gid }}"
+    mode: '0600'
+
+- name: Wait for all control plane pods to be ready
+  command: kubectl get pods -n kube-system
+  register: kube_pods
+  until: kube_pods.rc == 0
+  retries: 10
+  delay: 10
+  changed_when: false
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+- name: Install Flannel CNI
+  command: kubectl apply -f {{ k8s_cni_url }}
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  when: not k8s_admin_conf.stat.exists
+
+- name: Wait for Flannel to be ready
+  command: kubectl wait --for=condition=ready pod -l app=flannel -n kube-flannel --timeout=300s
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  when: not k8s_admin_conf.stat.exists
+  ignore_errors: true
+
+- name: Generate join command
+  command: kubeadm token create --print-join-command
+  register: k8s_join_command_output
+  changed_when: false
+
+- name: Set join command as fact
+  set_fact:
+    k8s_join_command: "{{ k8s_join_command_output.stdout }}"

@@ -1,0 +1,21 @@
+---
+- name: Check if node is already joined
+  stat:
+    path: /etc/kubernetes/kubelet.conf
+  register: kubelet_conf
+
+- name: Join worker to cluster
+  command: "{{ hostvars[groups['k8s_master'][0]]['k8s_join_command'] }}"
+  when: not kubelet_conf.stat.exists
+
+- name: Wait for node to be ready
+  command: kubectl get nodes {{ inventory_hostname }}
+  register: node_status
+  until: "'Ready' in node_status.stdout"
+  retries: 10
+  delay: 10
+  delegate_to: "{{ groups['k8s_master'][0] }}"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  when: not kubelet_conf.stat.exists
+  changed_when: false

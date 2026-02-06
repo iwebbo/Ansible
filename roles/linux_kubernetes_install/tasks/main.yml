@@ -1,0 +1,18 @@
+---
+- name: Include prerequisites tasks
+  include_tasks: prerequisites.yml
+  tags:
+    - install
+    - prerequisites
+
+- name: Include containerd tasks
+  include_tasks: containerd.yml
+  tags:
+    - install
+    - containerd
+
+- name: Include kubernetes tools tasks
+  include_tasks: kubernetes-tools.yml
+  tags:
+    - install
+    - k8s-tools
