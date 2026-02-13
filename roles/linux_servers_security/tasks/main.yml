@@ -1,0 +1,29 @@
+---
+# tasks file for security_hardening
+
+- name: Include installation tasks
+  import_tasks: install.yml
+  tags: 
+    - install
+    - security
+
+- name: Include Shorewall configuration
+  import_tasks: configure_shorewall.yml
+  tags: 
+    - configuration
+    - shorewall
+    - security
+
+- name: Include fail2ban configuration
+  import_tasks: configure_fail2ban.yml
+  tags: 
+    - configuration
+    - fail2ban
+    - security
+
+- name: Include SSH configuration
+  import_tasks: configure_ssh.yml
+  tags: 
+    - configuration
+    - ssh
+    - security

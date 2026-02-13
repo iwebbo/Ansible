@@ -1,0 +1,84 @@
+# SSH Configuration sécurisée - Ansible managed
+
+# Port SSH
+Port {{ ssh_port }}
+
+# Protocole
+Protocol 2
+
+# Host keys
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+HostKey /etc/ssh/ssh_host_ed25519_key
+
+# Logging
+SyslogFacility AUTH
+LogLevel {{ ssh_log_level }}
+
+# Authentication
+LoginGraceTime {{ ssh_login_grace_time }}
+PermitRootLogin {{ ssh_permit_root_login }}
+StrictModes yes
+MaxAuthTries {{ ssh_max_auth_tries }}
+MaxSessions {{ ssh_max_sessions }}
+
+# Public key authentication
+PubkeyAuthentication yes
+AuthorizedKeysFile {{ ssh_authorized_keys_file }}
+
+# Password authentication
+PasswordAuthentication {{ ssh_password_authentication }}
+PermitEmptyPasswords no
+
+# Challenge-response authentication
+ChallengeResponseAuthentication no
+
+# Kerberos
+KerberosAuthentication no
+
+# GSSAPI
+GSSAPIAuthentication no
+
+# PAM
+UsePAM yes
+
+# X11 Forwarding
+X11Forwarding {{ ssh_x11_forwarding }}
+
+# Print MOTD
+PrintMotd no
+
+# TCP Keepalive
+TCPKeepAlive yes
+
+# Client alive
+ClientAliveInterval {{ ssh_client_alive_interval }}
+ClientAliveCountMax {{ ssh_client_alive_count_max }}
+
+# Accept environment variables
+AcceptEnv LANG LC_*
+
+# Subsystem
+Subsystem sftp {{ ssh_sftp_subsystem }}
+
+# Restricted users/groups
+{% if ssh_allow_users is defined and ssh_allow_users|length > 0 %}
+AllowUsers {{ ssh_allow_users | join(' ') }}
+{% endif %}
+
+{% if ssh_allow_groups is defined and ssh_allow_groups|length > 0 %}
+AllowGroups {{ ssh_allow_groups | join(' ') }}
+{% endif %}
+
+{% if ssh_deny_users is defined and ssh_deny_users|length > 0 %}
+DenyUsers {{ ssh_deny_users | join(' ') }}
+{% endif %}
+
+{% if ssh_deny_groups is defined and ssh_deny_groups|length > 0 %}
+DenyGroups {{ ssh_deny_groups | join(' ') }}
+{% endif %}
+
+# Ciphers and algorithms
+Ciphers {{ ssh_ciphers | join(',') }}
+MACs {{ ssh_macs | join(',') }}
+KexAlgorithms {{ ssh_kex_algorithms | join(',') }}

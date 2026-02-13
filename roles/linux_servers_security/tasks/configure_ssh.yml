@@ -1,0 +1,56 @@
+---
+# Configuration SSH sécurisée
+
+- name: Backup original SSH configuration
+  copy:
+    src: /etc/ssh/sshd_config
+    dest: /etc/ssh/sshd_config.backup
+    remote_src: yes
+    force: no
+  tags: 
+    - configuration
+
+- name: Configure SSH daemon
+  template:
+    src: ssh/sshd_config.j2
+    dest: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    mode: '0600'
+    backup: yes
+    validate: '/usr/sbin/sshd -t -f %s'
+  notify: restart sshd
+  tags: 
+    - configuration
+
+- name: Ensure SSH directory exists for admin users
+  file:
+    path: "/home/{{ item }}/.ssh"
+    state: directory
+    owner: "{{ item }}"
+    group: "{{ item }}"
+    mode: '0700'
+  loop: "{{ ssh_admin_users }}"
+  when: ssh_admin_users is defined
+  tags: 
+    - configuration
+
+- name: Deploy authorized keys for admin users
+  authorized_key:
+    user: "{{ item.user }}"
+    key: "{{ item.key }}"
+    state: present
+  loop: "{{ ssh_authorized_keys }}"
+  when: ssh_authorized_keys is defined
+  tags: 
+    - configuration
+
+- name: Disable root login via password
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PermitRootLogin'
+    line: 'PermitRootLogin prohibit-password'
+    validate: '/usr/sbin/sshd -t -f %s'
+  notify: restart sshd
+  tags: 
+    - configuration

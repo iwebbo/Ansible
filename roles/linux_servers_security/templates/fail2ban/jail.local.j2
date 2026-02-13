@@ -1,0 +1,41 @@
+[DEFAULT]
+# Ban hosts for {{ fail2ban_bantime }}
+bantime  = {{ fail2ban_bantime }}
+findtime  = {{ fail2ban_findtime }}
+maxretry = {{ fail2ban_maxretry }}
+
+# Backend
+backend = {{ fail2ban_backend }}
+
+# Email configuration
+destemail = {{ fail2ban_destemail }}
+sendername = {{ fail2ban_sendername }}
+sender = {{ fail2ban_sender }}
+
+# Mailing action
+mta = {{ fail2ban_mta }}
+action = {{ fail2ban_action }}
+
+# SSH jail
+[sshd]
+enabled = {{ fail2ban_sshd_enabled }}
+port    = {{ fail2ban_sshd_port }}
+filter  = sshd
+logpath = /var/log/auth.log
+maxretry = {{ fail2ban_sshd_maxretry }}
+bantime  = {{ fail2ban_sshd_bantime }}
+
+# Custom jails
+{% for jail in fail2ban_custom_jails %}
+[{{ jail.name }}]
+enabled = {{ jail.enabled | default('true') }}
+port    = {{ jail.port }}
+filter  = {{ jail.filter }}
+logpath = {{ jail.logpath }}
+maxretry = {{ jail.maxretry | default(fail2ban_maxretry) }}
+bantime  = {{ jail.bantime | default(fail2ban_bantime) }}
+{% if jail.findtime is defined %}
+findtime = {{ jail.findtime }}
+{% endif %}
+
+{% endfor %}

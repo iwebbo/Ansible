@@ -1,0 +1,27 @@
+---
+- name: "Gitea | Create project directory"
+  ansible.builtin.file:
+    path: "{{ gitea_project_path }}"
+    state: directory
+    mode: '0755'
+  tags: [install, configure]
+
+- name: "Gitea | Deploy docker-compose template"
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ gitea_project_path }}/docker-compose.yml"
+    mode: '0644'
+  tags: [configure]
+
+- name: "Gitea | Start Container via Docker Compose"
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --remove-orphans"
+    chdir: "{{ gitea_project_path }}"
+  register: docker_out
+  changed_when: "'Started' in docker_out.stderr or 'Created' in docker_out.stderr or 'Recreated' in docker_out.stderr"
+  tags: [install, configure]
+
+- name: "Gitea | Status Output"
+  ansible.builtin.debug:
+    msg: "Gitea deployment output: {{ docker_out.stderr }}"
+  tags: [install, configure]

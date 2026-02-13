@@ -1,0 +1,32 @@
+---
+# handlers file for security_hardening
+
+- name: restart shorewall
+  systemd:
+    name: shorewall
+    state: restarted
+  listen: restart shorewall
+
+- name: reload shorewall
+  systemd:
+    name: shorewall
+    state: reloaded
+  listen: reload shorewall
+
+- name: restart fail2ban
+  systemd:
+    name: fail2ban
+    state: restarted
+  listen: restart fail2ban
+
+- name: restart sshd
+  systemd:
+    name: "{{ ssh_service_name }}"
+    state: restarted
+  listen: restart sshd
+
+- name: reload sshd
+  systemd:
+    name: "{{ ssh_service_name }}"
+    state: reloaded
+  listen: reload sshd

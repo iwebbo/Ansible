@@ -1,0 +1,76 @@
+---
+# Configuration de Shorewall
+
+- name: Configure Shorewall zones
+  template:
+    src: shorewall/zones.j2
+    dest: /etc/shorewall/zones
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+  notify: restart shorewall
+  tags: 
+    - configuration
+
+- name: Configure Shorewall interfaces
+  template:
+    src: shorewall/interfaces.j2
+    dest: /etc/shorewall/interfaces
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+  notify: restart shorewall
+  tags: 
+    - configuration
+
+- name: Configure Shorewall policy
+  template:
+    src: shorewall/policy.j2
+    dest: /etc/shorewall/policy
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+  notify: restart shorewall
+  tags: 
+    - configuration
+
+- name: Configure Shorewall rules
+  template:
+    src: shorewall/rules.j2
+    dest: /etc/shorewall/rules
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+  notify: restart shorewall
+  tags: 
+    - configuration
+
+- name: Enable Shorewall startup
+  lineinfile:
+    path: /etc/default/shorewall
+    regexp: '^startup='
+    line: 'startup=1'
+    create: yes
+  when: ansible_os_family == "Debian"
+  tags: 
+    - configuration
+
+- name: Enable and start Shorewall service
+  systemd:
+    name: shorewall
+    enabled: yes
+    state: started
+  tags: 
+    - configuration
+
+- name: Validate Shorewall configuration
+  command: shorewall check
+  register: shorewall_check
+  changed_when: false
+  failed_when: shorewall_check.rc != 0
+  tags: 
+    - configuration

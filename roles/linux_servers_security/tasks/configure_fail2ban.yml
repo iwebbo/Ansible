@@ -1,0 +1,30 @@
+---
+# Configuration de fail2ban
+
+- name: Configure fail2ban jail.local
+  template:
+    src: fail2ban/jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+  notify: restart fail2ban
+  tags: 
+    - configuration
+
+- name: Enable and start fail2ban service
+  systemd:
+    name: fail2ban
+    enabled: yes
+    state: started
+  tags: 
+    - configuration
+
+- name: Validate fail2ban configuration
+  command: fail2ban-client -t
+  register: fail2ban_check
+  changed_when: false
+  failed_when: fail2ban_check.rc != 0
+  tags: 
+    - configuration

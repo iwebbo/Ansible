@@ -1,0 +1,103 @@
+---
+# defaults file for security_hardening
+
+# Packages
+shorewall_packages:
+  - shorewall
+fail2ban_packages:
+  - fail2ban
+ssh_packages:
+  - openssh-server
+
+# Shorewall configuration
+shorewall_interface: "eth0"
+shorewall_broadcast: "192.168.1.255"
+shorewall_interface_options: "tcpflags,nosmurfs,routefilter,logmartians,dhcp"
+shorewall_ssh_enabled: true
+shorewall_ssh_port: 22
+shorewall_http_enabled: false
+shorewall_allow_ping: true
+shorewall_custom_rules: []
+  # Exemple:
+  # - action: ACCEPT
+  #   source: net
+  #   dest: $FW
+  #   proto: tcp
+  #   port: 8080
+
+# fail2ban configuration
+fail2ban_bantime: "1h"
+fail2ban_findtime: "10m"
+fail2ban_maxretry: 5
+fail2ban_backend: "systemd"
+fail2ban_destemail: "root@localhost"
+fail2ban_sendername: "Fail2Ban"
+fail2ban_sender: "fail2ban@localhost"
+fail2ban_mta: "sendmail"
+fail2ban_action: "%(action_mwl)s"
+
+# fail2ban SSH jail
+fail2ban_sshd_enabled: true
+fail2ban_sshd_port: "ssh"
+fail2ban_sshd_maxretry: 3
+fail2ban_sshd_bantime: "1h"
+
+# fail2ban custom jails
+fail2ban_custom_jails: []
+  # Exemple:
+  # - name: apache-auth
+  #   enabled: true
+  #   port: http,https
+  #   filter: apache-auth
+  #   logpath: /var/log/apache2/error.log
+  #   maxretry: 5
+
+# SSH configuration
+ssh_service_name: "ssh"
+ssh_port: 22
+ssh_log_level: "INFO"
+ssh_login_grace_time: "2m"
+ssh_permit_root_login: "prohibit-password"
+ssh_max_auth_tries: 3
+ssh_max_sessions: 10
+ssh_authorized_keys_file: ".ssh/authorized_keys"
+ssh_password_authentication: "no"
+ssh_x11_forwarding: "no"
+ssh_client_alive_interval: 300
+ssh_client_alive_count_max: 2
+ssh_sftp_subsystem: "/usr/lib/openssh/sftp-server"
+
+# SSH security algorithms
+ssh_ciphers:
+  - "chacha20-poly1305@openssh.com"
+  - "aes256-gcm@openssh.com"
+  - "aes128-gcm@openssh.com"
+  - "aes256-ctr"
+  - "aes192-ctr"
+  - "aes128-ctr"
+
+ssh_macs:
+  - "hmac-sha2-512-etm@openssh.com"
+  - "hmac-sha2-256-etm@openssh.com"
+  - "hmac-sha2-512"
+  - "hmac-sha2-256"
+
+ssh_kex_algorithms:
+  - "curve25519-sha256"
+  - "curve25519-sha256@libssh.org"
+  - "diffie-hellman-group-exchange-sha256"
+
+# SSH access control
+ssh_allow_users: []
+ssh_allow_groups: []
+ssh_deny_users: ["root"]
+ssh_deny_groups: []
+
+# SSH admin users (pour créer .ssh directory)
+ssh_admin_users: []
+
+# SSH authorized keys (à déployer)
+ssh_authorized_keys: []
+  # Exemple:
+  # - user: admin
+  #   key: "ssh-rsa AAAAB3... user@host"

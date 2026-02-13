@@ -1,0 +1,44 @@
+---
+# Installation des packages de sécurité
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+  tags: 
+    - install
+
+- name: Install Shorewall
+  package:
+    name: "{{ shorewall_packages }}"
+    state: present
+  tags: 
+    - install
+
+- name: Install fail2ban
+  package:
+    name: "{{ fail2ban_packages }}"
+    state: present
+  tags: 
+    - install
+
+- name: Install SSH server
+  package:
+    name: "{{ ssh_packages }}"
+    state: present
+  tags: 
+    - install
+
+- name: Ensure required directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /etc/shorewall
+    - /etc/fail2ban
+    - /etc/fail2ban/filter.d
+    - /etc/fail2ban/jail.d
+  tags: 
+    - install

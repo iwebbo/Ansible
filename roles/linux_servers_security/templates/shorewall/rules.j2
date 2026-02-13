@@ -1,0 +1,39 @@
+#ACTION         SOURCE          DEST            PROTO   DEST    SOURCE          ORIGINAL        RATE            USER/   MARK    CONNLIMIT       TIME         HEADERS         SWITCH
+#                                                       PORT    PORT(S)         DEST            LIMIT           GROUP
+?SECTION ALL
+?SECTION ESTABLISHED
+?SECTION RELATED
+?SECTION INVALID
+?SECTION UNTRACKED
+?SECTION NEW
+
+# Accept SSH connections
+{% if shorewall_ssh_enabled %}
+ACCEPT          net             $FW             tcp     {{ shorewall_ssh_port }}
+{% endif %}
+
+# Accept HTTP/HTTPS
+{% if shorewall_http_enabled %}
+ACCEPT          net             $FW             tcp     80
+ACCEPT          net             $FW             tcp     443
+{% endif %}
+
+# Custom rules
+{% for rule in shorewall_custom_rules %}
+{{ rule.action }}          {{ rule.source }}             {{ rule.dest }}             {{ rule.proto }}     {{ rule.port }}
+{% endfor %}
+
+# Drop Ping from the "bad" net zone
+{% if not shorewall_allow_ping %}
+DROP            net             $FW             icmp    8
+{% else %}
+ACCEPT          net             $FW             icmp    8
+{% endif %}
+
+# Accept DNS
+ACCEPT          $FW             net             udp     53
+ACCEPT          $FW             net             tcp     53
+
+# Drop SMB/CIFS attempts
+DROP            net             $FW             udp     137,138
+DROP            net             $FW             tcp     139,445
