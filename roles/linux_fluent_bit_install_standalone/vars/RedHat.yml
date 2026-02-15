@@ -1,0 +1,3 @@
+---
+fluent_bit_package_name: "fluent-bit"
+fluent_bit_service_name: "fluent-bit"

@@ -1,0 +1,24 @@
+# ============================================================================
+# OUTPUT: LOKI
+# Envoie les logs vers Grafana Loki
+# ============================================================================
+
+[OUTPUT]
+    Name                  loki
+    Match                 *
+    Host                  {{ fluent_bit_loki_host }}
+    Port                  {{ fluent_bit_loki_port }}
+    Labels                {{ fluent_bit_loki_labels }}
+    
+    # HTTP settings
+    http_user             ${LOKI_USER}
+    http_passwd           ${LOKI_PASSWORD}
+    
+    # Line format
+    line_format           json
+    
+    # Auto create labels from log keys
+    auto_kubernetes_labels on
+    
+    # Buffer
+    Retry_Limit           {{ fluent_bit_retry_limit }}

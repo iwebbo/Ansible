@@ -1,0 +1,35 @@
+# ============================================================================
+# FILTERS
+# ============================================================================
+
+{% if fluent_bit_filter_add_hostname %}
+# Ajout du hostname
+[FILTER]
+    Name                record_modifier
+    Match               *
+    Record              hostname ${HOSTNAME}
+{% endif %}
+
+{% if fluent_bit_filter_add_cluster %}
+# Ajout du nom du cluster
+[FILTER]
+    Name                record_modifier
+    Match               *
+    Record              cluster_name {{ fluent_bit_cluster_name }}
+{% endif %}
+
+{% if fluent_bit_filter_custom_records | length > 0 %}
+# Ajout de champs personnalisés
+[FILTER]
+    Name                record_modifier
+    Match               *
+{% for key, value in fluent_bit_filter_custom_records.items() %}
+    Record              {{ key }} {{ value }}
+{% endfor %}
+{% endif %}
+
+# Suppression des champs internes Fluent Bit (optionnel, pour alléger)
+[FILTER]
+    Name                record_modifier
+    Match               *
+    Remove_key          __FLUENT_BIT_TIME__

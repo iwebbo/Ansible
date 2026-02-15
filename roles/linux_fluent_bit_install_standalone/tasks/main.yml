@@ -1,0 +1,28 @@
+---
+# ============================================================================
+# FLUENT BIT STANDALONE - INSTALLATION & CONFIGURATION
+# ============================================================================
+
+- name: Include OS-specific variables
+  include_vars: "{{ ansible_os_family }}.yml"
+  tags: [always]
+
+- name: Install Fluent Bit
+  include_tasks: install.yml
+  tags: [install]
+
+- name: Configure user and permissions
+  include_tasks: user.yml
+  tags: [config, user]
+
+- name: Create directory structure
+  include_tasks: directories.yml
+  tags: [config, directories]
+
+- name: Deploy Fluent Bit configuration
+  include_tasks: configure.yml
+  tags: [config]
+
+- name: Manage Fluent Bit service
+  include_tasks: service.yml
+  tags: [service]

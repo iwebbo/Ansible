@@ -1,0 +1,85 @@
+---
+# ============================================================================
+# CONFIGURATION OF USER & PERMISSIONS
+# ============================================================================
+
+- name: Create Fluent Bit system group
+  group:
+    name: "{{ fluent_bit_group }}"
+    system: yes
+    state: present
+
+- name: Create Fluent Bit system user
+  user:
+    name: "{{ fluent_bit_user }}"
+    group: "{{ fluent_bit_group }}"
+    system: yes
+    shell: /sbin/nologin
+    home: "{{ fluent_bit_data_dir }}"
+    create_home: no
+    comment: "Fluent Bit System User"
+    state: present
+
+# --- PERMISSIONS DOCKER ---
+- name: Add Fluent Bit user to docker group
+  user:
+    name: "{{ fluent_bit_user }}"
+    groups: docker
+    append: yes
+  when: fluent_bit_inputs.docker | default(false)
+  notify: restart fluent-bit
+
+- name: Check Docker containers directory permissions
+  stat:
+    path: /var/lib/docker/containers
+  register: docker_containers_dir
+  when: fluent_bit_inputs.docker | default(false)
+  failed_when: false
+
+- name: Ensure Fluent Bit can read Docker container logs
+  file:
+    path: /var/lib/docker/containers
+    mode: '0755'
+    recurse: no
+  when: 
+    - fluent_bit_inputs.docker | default(false)
+    - docker_containers_dir.stat.exists | default(false)
+  failed_when: false
+
+# --- PERMISSIONS SYSTEMD ---
+- name: Add Fluent Bit user to systemd-journal group
+  user:
+    name: "{{ fluent_bit_user }}"
+    groups: systemd-journal
+    append: yes
+  when: fluent_bit_inputs.systemd | default(false)
+  notify: restart fluent-bit
+
+# --- PERMISSIONS APACHE ---
+- name: Add Fluent Bit user to adm group (for Apache logs)
+  user:
+    name: "{{ fluent_bit_user }}"
+    groups: adm
+    append: yes
+  when: fluent_bit_inputs.apache | default(false)
+  notify: restart fluent-bit
+
+# --- PERMISSIONS NGINX ---
+- name: Add Fluent Bit user to adm group (for Nginx logs)
+  user:
+    name: "{{ fluent_bit_user }}"
+    groups: adm
+    append: yes
+  when: fluent_bit_inputs.nginx | default(false)
+  notify: restart fluent-bit
+
+# --- PERMISSIONS CUSTOM FILES ---
+- name: Set permissions on custom log files
+  file:
+    path: "{{ item.path | dirname }}"
+    mode: '0755'
+  loop: "{{ fluent_bit_custom_files }}"
+  when:
+    - fluent_bit_inputs.custom_files | default(false)
+    - fluent_bit_custom_files | length > 0
+  failed_when: false 

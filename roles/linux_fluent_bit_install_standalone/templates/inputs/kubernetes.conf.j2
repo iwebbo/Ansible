@@ -1,0 +1,37 @@
+# ============================================================================
+# INPUT: KUBERNETES PODS
+# ============================================================================
+
+[INPUT]
+    Name              tail
+    Tag               {{ fluent_bit_kubernetes_tag }}.*
+    Path              {{ fluent_bit_kubernetes_path }}
+{% if fluent_bit_kubernetes_exclude_path != "" %}
+    Exclude_Path      {{ fluent_bit_kubernetes_exclude_path }}
+{% endif %}
+    DB                {{ fluent_bit_data_dir }}/flb_kube.db
+    Mem_Buf_Limit     {{ fluent_bit_mem_buf_limit }}
+    Skip_Long_Lines   On
+    Refresh_Interval  10
+    Read_from_Head    False
+
+{% if fluent_bit_kubernetes_filter_enabled %}
+# ============================================================================
+# FILTER: KUBERNETES METADATA ENRICHMENT
+# Ajoute les métadonnées Kubernetes (namespace, pod, labels, etc.)
+# ============================================================================
+
+[FILTER]
+    Name                kubernetes
+    Match               {{ fluent_bit_kubernetes_tag }}.*
+    Kube_URL            {{ fluent_bit_kubernetes_api_url }}
+    Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
+    Kube_Tag_Prefix     {{ fluent_bit_kubernetes_tag }}.
+    Merge_Log           {{ 'On' if fluent_bit_kubernetes_merge_log else 'Off' }}
+    Keep_Log            {{ 'On' if fluent_bit_kubernetes_keep_log else 'Off' }}
+    K8S-Logging.Parser  On
+    K8S-Logging.Exclude On
+    Labels              {{ 'On' if fluent_bit_kubernetes_labels else 'Off' }}
+    Annotations         {{ 'On' if fluent_bit_kubernetes_annotations else 'Off' }}
+{% endif %}

@@ -1,0 +1,15 @@
+# ============================================================================
+# INPUT: SYSTEMD JOURNAL
+# Generate from Ansible.
+# ============================================================================
+
+{% for service in fluent_bit_systemd_services %}
+[INPUT]
+    Name              systemd
+    Tag               systemd.{{ service }}
+    Systemd_Filter    _SYSTEMD_UNIT={{ service }}.service
+    Read_From_Tail    On
+    Strip_Underscores On
+    Lowercase         On
+
+{% endfor %}

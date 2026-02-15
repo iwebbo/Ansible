@@ -1,0 +1,48 @@
+---
+galaxy_info:
+  role_name: fluent_bit_standalone
+  namespace: A&ECoding
+  author: A&ECoding
+  description: |
+    Install and configure Fluent Bit in standalone mode.
+    Supports multiple input sources (Docker, Kubernetes, systemd, Apache, Nginx, custom files)
+    and outputs to OpenSearch/Elasticsearch.
+  
+  license: MIT
+  min_ansible_version: "2.10"
+  
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+        - noble
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+    - name: EL
+      versions:
+        - 8
+        - 9
+    - name: Fedora
+      versions:
+        - 37
+        - 38
+        - 39
+  
+  galaxy_tags:
+    - logging
+    - fluent-bit
+    - fluentbit
+    - opensearch
+    - elasticsearch
+    - monitoring
+    - observability
+    - logs
+    - log-forwarding
+    - docker
+    - kubernetes
+    - systemd
+
+dependencies: []

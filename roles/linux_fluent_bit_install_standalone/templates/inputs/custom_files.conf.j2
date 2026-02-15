@@ -1,0 +1,23 @@
+# ============================================================================
+# INPUT: CUSTOM FILES
+# ============================================================================
+
+{% for file in fluent_bit_custom_files %}
+[INPUT]
+    Name              tail
+    Tag               custom.{{ file.tag }}
+    Path              {{ file.path }}
+{% if file.exclude_path is defined and file.exclude_path != "" %}
+    Exclude_Path      {{ file.exclude_path }}
+{% endif %}
+    DB                {{ fluent_bit_data_dir }}/custom_{{ file.tag }}.db
+    Mem_Buf_Limit     {{ fluent_bit_mem_buf_limit }}
+    Skip_Long_Lines   On
+    Refresh_Interval  5
+    Read_from_Head    False
+{% if file.multiline is defined and file.multiline %}
+    Multiline         On
+    Parser_Firstline  {{ file.multiline_parser | default('multiline-regex-firstline') }}
+{% endif %}
+
+{% endfor %}

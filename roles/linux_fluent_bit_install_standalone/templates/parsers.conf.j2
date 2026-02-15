@@ -1,0 +1,139 @@
+# ============================================================================
+# FLUENT BIT - PARSERS
+# Create by Ansible
+# ============================================================================
+
+# --- DOCKER ---
+[PARSER]
+    Name        docker
+    Format      json
+    Time_Key    time
+    Time_Format %Y-%m-%dT%H:%M:%S.%L
+    Time_Keep   On
+
+[PARSER]
+    Name        docker_no_time
+    Format      json
+
+# --- KUBERNETES ---
+[PARSER]
+    Name        kube
+    Format      regex
+    Regex       ^(?<time>[^ ]+) (?<stream>stdout|stderr) (?<logtag>[^ ]*) (?<log>.*)$
+    Time_Key    time
+    Time_Format %Y-%m-%dT%H:%M:%S.%L%z
+    Time_Keep   On
+
+# --- APACHE ---
+[PARSER]
+    Name        apache
+    Format      regex
+    Regex       ^(?<host>[^ ]*) [^ ]* (?<user>[^ ]*) \[(?<time>[^\]]*)\] "(?<method>\S+)(?: +(?<path>[^\"]*?)(?: +\S*)?)?" (?<code>[^ ]*) (?<size>[^ ]*)(?: "(?<referer>[^\"]*)" "(?<agent>[^\"]*)")?$
+    Time_Key    time
+    Time_Format %d/%b/%Y:%H:%M:%S %z
+
+[PARSER]
+    Name        apache2
+    Format      regex
+    Regex       ^(?<host>[^ ]*) [^ ]* (?<user>[^ ]*) \[(?<time>[^\]]*)\] "(?<method>\S+)(?: +(?<path>[^ ]*) +\S*)?" (?<code>[^ ]*) (?<size>[^ ]*)(?: "(?<referer>[^\"]*)" "(?<agent>[^\"]*)")?$
+    Time_Key    time
+    Time_Format %d/%b/%Y:%H:%M:%S %z
+
+[PARSER]
+    Name        apache_error
+    Format      regex
+    Regex       ^\[[^ ]* (?<time>[^\]]*)\] \[(?<level>[^\]]*)\](?: \[pid (?<pid>[^\]]*)\])?( \[client (?<client>[^\]]*)\])? (?<message>.*)$
+    Time_Key    time
+    Time_Format %a %b %d %H:%M:%S.%L %Y
+
+# --- NGINX ---
+[PARSER]
+    Name        nginx
+    Format      regex
+    Regex       ^(?<remote>[^ ]*) (?<host>[^ ]*) (?<user>[^ ]*) \[(?<time>[^\]]*)\] "(?<method>\S+)(?: +(?<path>[^\"]*?)(?: +\S*)?)?" (?<code>[^ ]*) (?<size>[^ ]*)(?: "(?<referer>[^\"]*)" "(?<agent>[^\"]*)")?$
+    Time_Key    time
+    Time_Format %d/%b/%Y:%H:%M:%S %z
+
+[PARSER]
+    Name        nginx_error
+    Format      regex
+    Regex       ^(?<time>[^ ]+ [^ ]+) \[(?<level>[^\]]+)\] (?<pid>\d+)#(?<tid>\d+): (\*(?<cid>\d+) )?(?<message>.*)$
+    Time_Key    time
+    Time_Format %Y/%m/%d %H:%M:%S
+
+# --- JSON ---
+[PARSER]
+    Name        json
+    Format      json
+    Time_Key    time
+    Time_Format %Y-%m-%dT%H:%M:%S.%L
+    Time_Keep   On
+
+[PARSER]
+    Name        json_no_time
+    Format      json
+
+# --- SYSLOG ---
+[PARSER]
+    Name        syslog-rfc3164
+    Format      regex
+    Regex       /^\<(?<pri>[0-9]+)\>(?<time>[^ ]* {1,2}[^ ]* [^ ]*) (?<host>[^ ]*) (?<ident>[a-zA-Z0-9_\/\.\-]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<message>.*)$/
+    Time_Key    time
+    Time_Format %b %d %H:%M:%S
+    Time_Keep   On
+
+[PARSER]
+    Name        syslog-rfc5424
+    Format      regex
+    Regex       ^\<(?<pri>[0-9]{1,5})\>1 (?<time>[^ ]+) (?<host>[^ ]+) (?<ident>[^ ]+) (?<pid>[-0-9]+) (?<msgid>[^ ]+) (?<extradata>(\[(.*?)\]|-)) (?<message>.+)$
+    Time_Key    time
+    Time_Format %Y-%m-%dT%H:%M:%S.%L%z
+    Time_Keep   On
+
+# --- MULTILINE PARSERS ---
+# Java stack traces
+[MULTILINE_PARSER]
+    name          multiline-java
+    type          regex
+    flush_timeout 1000
+    rule          "start_state"   "/^(\d{4}-\d{2}-\d{2}|\w{3}\s+\d{1,2})\s/"  "cont"
+    rule          "cont"          "/^(?!\d{4}-\d{2}-\d{2}|\w{3}\s+\d{1,2}\s)/"  "cont"
+
+# Go panic stack traces
+[MULTILINE_PARSER]
+    name          multiline-go
+    type          regex
+    flush_timeout 1000
+    rule          "start_state"   "/^panic: /"  "cont"
+    rule          "cont"          "/^\s+/"  "cont"
+
+# Python tracebacks
+[MULTILINE_PARSER]
+    name          multiline-python
+    type          regex
+    flush_timeout 1000
+    rule          "start_state"   "/^Traceback \(most recent call last\):$/"  "cont"
+    rule          "cont"          "/^  /"  "cont"
+    rule          "cont"          "/^[A-Za-z][A-Za-z0-9]*Error:/"  "end"
+
+{% if fluent_bit_custom_parsers | length > 0 %}
+# --- CUSTOM PARSERS ---
+{% for parser in fluent_bit_custom_parsers %}
+[PARSER]
+    Name        {{ parser.name }}
+    Format      {{ parser.format }}
+{% if parser.regex is defined %}
+    Regex       {{ parser.regex }}
+{% endif %}
+{% if parser.time_key is defined %}
+    Time_Key    {{ parser.time_key }}
+{% endif %}
+{% if parser.time_format is defined %}
+    Time_Format {{ parser.time_format }}
+{% endif %}
+{% if parser.time_keep is defined %}
+    Time_Keep   {{ parser.time_keep }}
+{% endif %}
+
+{% endfor %}
+{% endif %}

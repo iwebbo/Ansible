@@ -1,0 +1,35 @@
+---
+# ============================================================================
+# Directory of FluentBit
+# ============================================================================
+
+- name: Create Fluent Bit configuration directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ fluent_bit_user }}"
+    group: "{{ fluent_bit_group }}"
+    mode: '0755'
+  loop:
+    - "{{ fluent_bit_config_dir }}"
+    - "{{ fluent_bit_config_dir }}/conf.d"
+    - "{{ fluent_bit_config_dir }}/parsers"
+    - "{{ fluent_bit_config_dir }}/inputs"
+    - "{{ fluent_bit_config_dir }}/filters"
+    - "{{ fluent_bit_config_dir }}/outputs"
+
+- name: Create Fluent Bit data directory
+  file:
+    path: "{{ fluent_bit_data_dir }}"
+    state: directory
+    owner: "{{ fluent_bit_user }}"
+    group: "{{ fluent_bit_group }}"
+    mode: '0755'
+
+- name: Create Fluent Bit log directory
+  file:
+    path: /var/log/fluent-bit
+    state: directory
+    owner: "{{ fluent_bit_user }}"
+    group: "{{ fluent_bit_group }}"
+    mode: '0755'

@@ -1,0 +1,27 @@
+# ============================================================================
+# INPUT: APACHE LOGS
+# Monitore les access et error logs d'Apache
+# ============================================================================
+
+# Apache Access Logs
+[INPUT]
+    Name              tail
+    Tag               apache.access
+    Path              {{ fluent_bit_apache_access_log }}
+    DB                {{ fluent_bit_data_dir }}/apache_access.db
+    Mem_Buf_Limit     {{ fluent_bit_mem_buf_limit }}
+    Skip_Long_Lines   On
+    Refresh_Interval  5
+    Read_from_Head    False
+
+# Apache Error Logs
+[INPUT]
+    Name              tail
+    Tag               apache.error
+    Path              {{ fluent_bit_apache_error_log }}
+    Parser            apache_error
+    DB                {{ fluent_bit_data_dir }}/apache_error.db
+    Mem_Buf_Limit     {{ fluent_bit_mem_buf_limit }}
+    Skip_Long_Lines   On
+    Refresh_Interval  5
+    Read_from_Head    False

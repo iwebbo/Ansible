@@ -1,0 +1,178 @@
+---
+# ============================================================================
+# INSTALLATION FLUENT BIT
+# ============================================================================
+
+# Version
+fluent_bit_version: "3.0.0"
+
+# User/Group 
+fluent_bit_user: "fluent-bit"
+fluent_bit_group: "fluent-bit"
+
+# Directory
+fluent_bit_config_dir: "/etc/fluent-bit"
+fluent_bit_data_dir: "/var/lib/fluent-bit"
+
+# ============================================================================
+# CONFIGURATION GLOBALE FLUENT BIT
+# ============================================================================
+
+# log (error, warning, info, debug, trace)
+fluent_bit_log_level: "info"
+
+# Inter flush
+fluent_bit_flush_seconds: 5
+
+# HTTP Server 
+fluent_bit_http_server: true
+fluent_bit_http_port: 2020
+
+# Buffer et retry
+fluent_bit_mem_buf_limit: "5MB"
+fluent_bit_retry_limit: 5
+
+# Storage backend
+fluent_bit_storage_path: "{{ fluent_bit_data_dir }}"
+fluent_bit_storage_sync: "normal"
+fluent_bit_storage_checksum: false
+fluent_bit_storage_max_chunks_up: 128
+
+# ============================================================================
+# INPUTS - SOURCES DE LOGS À MONITORER
+# ============================================================================
+
+# Activate & Deactivate 
+fluent_bit_inputs:
+  docker: false          # Monitoring containers Docker from tail
+  kubernetes: false      # Monitoring pods K8s from tail
+  systemd: false         # Monitoring services systemd
+  apache: false          # Monitoring Apache access/error logs
+  nginx: false           # Monitoring Nginx access/error logs
+  custom_files: false    # Monitoring fichiers logs custom
+
+# --- INPUT: Docker ---
+fluent_bit_docker_path: "/var/lib/docker/containers/*/*.log"
+fluent_bit_docker_tag: "docker"
+
+# --- INPUT: Kubernetes ---
+fluent_bit_kubernetes_path: "/var/log/containers/*.log"
+fluent_bit_kubernetes_tag: "kube"
+fluent_bit_kubernetes_parser: "docker"
+fluent_bit_kubernetes_exclude_path: ""  # Exclude pods (ex: "/var/log/containers/*_kube-system_*.log")
+
+fluent_bit_kubernetes_filter_enabled: true
+fluent_bit_kubernetes_api_url: "https://kubernetes.default.svc:443"
+fluent_bit_kubernetes_merge_log: true
+fluent_bit_kubernetes_keep_log: false
+fluent_bit_kubernetes_annotations: false
+fluent_bit_kubernetes_labels: true
+
+# --- INPUT: Systemd ---
+fluent_bit_systemd_services:
+  - docker
+  - kubelet
+  - sshd
+
+# --- INPUT: Apache ---
+fluent_bit_apache_access_log: "/var/log/apache2/access.log"
+fluent_bit_apache_error_log: "/var/log/apache2/error.log"
+
+# --- INPUT: Nginx ---
+fluent_bit_nginx_access_log: "/var/log/nginx/access.log"
+fluent_bit_nginx_error_log: "/var/log/nginx/error.log"
+
+# --- INPUT: Custom Files ---
+# Liste de fichiers logs custom à monitorer
+# Format:
+#   - path: /var/log/app/app.log
+#     tag: myapp
+#     parser: json                    # Parser using (optionnel)
+#     multiline: false                # Support multiline (optionnel)
+#     multiline_parser: go            # Parser multiline if multiline=true
+#     exclude_path: ""                # Exclude files (optionnel)
+fluent_bit_custom_files: []
+
+# Exemple:
+# fluent_bit_custom_files:
+#   - path: /var/log/myapp/app.log
+#     tag: myapp
+#     parser: json
+#   - path: /var/log/api/*.log
+#     tag: api
+#     parser: json
+#     multiline: true
+#     multiline_parser: java
+
+# ============================================================================
+# FILTERS - TRAITEMENT DES LOGS
+# ============================================================================
+
+# Add hostname in log
+fluent_bit_filter_add_hostname: true
+
+# Add cluster name
+fluent_bit_filter_add_cluster: false
+fluent_bit_cluster_name: "production"
+
+# Change value of Custom
+fluent_bit_filter_custom_records: {}
+# Exemple:
+# fluent_bit_filter_custom_records:
+#   environment: production
+#   datacenter: eu-west-1
+
+# ============================================================================
+# OUTPUT - 
+# ============================================================================
+
+# Type d'output (opensearch, elasticsearch, loki)
+fluent_bit_output_type: "opensearch"
+
+# --- OpenSearch / Elasticsearch ---
+fluent_bit_opensearch_host: "opensearch.example.com"
+fluent_bit_opensearch_port: 9200
+fluent_bit_opensearch_index: "fluent-bit"
+fluent_bit_opensearch_user: "admin"
+fluent_bit_opensearch_password: "admin"
+
+# TLS
+fluent_bit_opensearch_tls: true
+fluent_bit_opensearch_tls_verify: true
+fluent_bit_opensearch_tls_ca_file: ""          
+fluent_bit_opensearch_tls_crt_file: ""         
+fluent_bit_opensearch_tls_key_file: ""         
+
+# Format Logstash (index with date: fluent-bit-2025.02.14)
+fluent_bit_opensearch_logstash_format: true
+fluent_bit_opensearch_logstash_prefix: "{{ fluent_bit_opensearch_index }}"
+fluent_bit_opensearch_logstash_dateformat: "%Y.%m.%d"
+
+# Generate ID
+fluent_bit_opensearch_generate_id: true
+
+# Buffer output
+fluent_bit_opensearch_buffer_size: "5MB"
+
+# Traces (debug)
+fluent_bit_opensearch_trace_output: false
+fluent_bit_opensearch_trace_error: true
+
+# --- Loki (futur support) ---
+fluent_bit_loki_host: "loki.example.com"
+fluent_bit_loki_port: 3100
+fluent_bit_loki_labels: '{job="fluent-bit"}'
+
+# ============================================================================
+# PARSERS CUSTOM 
+# ============================================================================
+
+# Parsers custom
+fluent_bit_custom_parsers: []
+# Exemple:
+# fluent_bit_custom_parsers:
+#   - name: myapp
+#     format: regex
+#     regex: '^(?<time>[^ ]+) (?<level>[^ ]+) (?<message>.*)$'
+#     time_key: time
+#     time_format: "%Y-%m-%dT%H:%M:%S.%L"

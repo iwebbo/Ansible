@@ -1,0 +1,44 @@
+---
+# ============================================================================
+# SERVICE FLUENT BIT
+# ============================================================================
+
+- name: Deploy Fluent Bit systemd service file
+  template:
+    src: fluent-bit.service.j2
+    dest: /etc/systemd/system/fluent-bit.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - reload systemd
+    - restart fluent-bit
+
+- name: Enable Fluent Bit service
+  systemd:
+    name: fluent-bit
+    enabled: yes
+    daemon_reload: yes
+
+- name: Start Fluent Bit service
+  systemd:
+    name: fluent-bit
+    state: started
+
+- name: Wait for Fluent Bit HTTP endpoint
+  wait_for:
+    host: localhost
+    port: "{{ fluent_bit_http_port }}"
+    timeout: 30
+  when: fluent_bit_http_server | default(true)
+  register: fb_http_check
+  failed_when: false
+
+- name: Check Fluent Bit service status
+  systemd:
+    name: fluent-bit
+  register: fb_service_status
+
+- name: Display Fluent Bit service status
+  debug:
+    msg: "Fluent Bit service is {{ fb_service_status.status.ActiveState }}"

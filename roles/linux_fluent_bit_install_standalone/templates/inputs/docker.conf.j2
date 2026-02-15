@@ -1,0 +1,13 @@
+# ============================================================================
+# INPUT: DOCKER CONTAINERS
+# ============================================================================
+
+[INPUT]
+    Name              tail
+    Tag               {{ fluent_bit_docker_tag }}.*
+    Path              /var/lib/docker/containers/*/*.log
+    DB                {{ fluent_bit_data_dir }}/flb_docker.db
+    Mem_Buf_Limit     {{ fluent_bit_mem_buf_limit }}
+    Skip_Long_Lines   On
+    Refresh_Interval  10
+    Read_from_Head    False

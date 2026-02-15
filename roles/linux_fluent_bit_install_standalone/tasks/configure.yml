@@ -1,0 +1,129 @@
+---
+# --- CONFIGURATION PRINCIPALE ---
+- name: Deploy main Fluent Bit configuration
+  template:
+    src: fluent-bit.conf.j2
+    dest: "{{ fluent_bit_config_dir }}/fluent-bit.conf"
+    owner: "{{ fluent_bit_user }}"
+    group: "{{ fluent_bit_group }}"
+    mode: '0644'
+  notify: restart fluent-bit
+
+# --- PARSERS ---
+- name: Deploy parsers configuration
+  template:
+    src: parsers.conf.j2
+    dest: "{{ fluent_bit_config_dir }}/parsers/parsers.conf"
+    owner: "{{ fluent_bit_user }}"
+    group: "{{ fluent_bit_group }}"
+    mode: '0644'
+  notify: restart fluent-bit
+
+# --- INPUTS ---
+- name: Deploy Docker input configuration
+  template:
+    src: inputs/docker.conf.j2
+    dest: "{{ fluent_bit_config_dir }}/inputs/docker.conf"
+    owner: "{{ fluent_bit_user }}"
+    group: "{{ fluent_bit_group }}"
+    mode: '0644'
+  when: fluent_bit_inputs.docker | default(false)
+  notify: restart fluent-bit
+
+- name: Deploy Kubernetes input configuration
+  template:
+    src: inputs/kubernetes.conf.j2
+    dest: "{{ fluent_bit_config_dir }}/inputs/kubernetes.conf"
+    owner: "{{ fluent_bit_user }}"
+    group: "{{ fluent_bit_group }}"
+    mode: '0644'
+  when: fluent_bit_inputs.kubernetes | default(false)
+  notify: restart fluent-bit
+
+- name: Deploy Systemd input configuration
+  template:
+    src: inputs/systemd.conf.j2
+    dest: "{{ fluent_bit_config_dir }}/inputs/systemd.conf"
+    owner: "{{ fluent_bit_user }}"
+    group: "{{ fluent_bit_group }}"
+    mode: '0644'
+  when: fluent_bit_inputs.systemd | default(false)
+  notify: restart fluent-bit
+
+- name: Deploy Apache input configuration
+  template:
+    src: inputs/apache.conf.j2
+    dest: "{{ fluent_bit_config_dir }}/inputs/apache.conf"
+    owner: "{{ fluent_bit_user }}"
+    group: "{{ fluent_bit_group }}"
+    mode: '0644'
+  when: fluent_bit_inputs.apache | default(false)
+  notify: restart fluent-bit
+
+- name: Deploy Nginx input configuration
+  template:
+    src: inputs/nginx.conf.j2
+    dest: "{{ fluent_bit_config_dir }}/inputs/nginx.conf"
+    owner: "{{ fluent_bit_user }}"
+    group: "{{ fluent_bit_group }}"
+    mode: '0644'
+  when: fluent_bit_inputs.nginx | default(false)
+  notify: restart fluent-bit
+
+- name: Deploy custom files input configuration
+  template:
+    src: inputs/custom_files.conf.j2
+    dest: "{{ fluent_bit_config_dir }}/inputs/custom_files.conf"
+    owner: "{{ fluent_bit_user }}"
+    group: "{{ fluent_bit_group }}"
+    mode: '0644'
+  when:
+    - fluent_bit_inputs.custom_files | default(false)
+    - fluent_bit_custom_files | length > 0
+  notify: restart fluent-bit
+
+# --- FILTERS ---
+- name: Deploy filters configuration
+  template:
+    src: filters.conf.j2
+    dest: "{{ fluent_bit_config_dir }}/filters/filters.conf"
+    owner: "{{ fluent_bit_user }}"
+    group: "{{ fluent_bit_group }}"
+    mode: '0644'
+  notify: restart fluent-bit
+
+# --- OUTPUTS ---
+- name: Deploy OpenSearch output configuration
+  template:
+    src: outputs/opensearch.conf.j2
+    dest: "{{ fluent_bit_config_dir }}/outputs/opensearch.conf"
+    owner: "{{ fluent_bit_user }}"
+    group: "{{ fluent_bit_group }}"
+    mode: '0644'
+  when: fluent_bit_output_type == 'opensearch' or fluent_bit_output_type == 'elasticsearch'
+  notify: restart fluent-bit
+
+- name: Deploy Loki output configuration
+  template:
+    src: outputs/loki.conf.j2
+    dest: "{{ fluent_bit_config_dir }}/outputs/loki.conf"
+    owner: "{{ fluent_bit_user }}"
+    group: "{{ fluent_bit_group }}"
+    mode: '0644'
+  when: fluent_bit_output_type == 'loki'
+  notify: restart fluent-bit
+
+# --- NETTOYAGE ---
+- name: Remove unused input configs
+  file:
+    path: "{{ fluent_bit_config_dir }}/inputs/{{ item }}.conf"
+    state: absent
+  loop:
+    - docker
+    - kubernetes
+    - systemd
+    - apache
+    - nginx
+    - custom_files
+  when: not fluent_bit_inputs[item] | default(false)
+  notify: restart fluent-bit

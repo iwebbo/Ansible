@@ -1,0 +1,53 @@
+# ============================================================================
+# FLUENT BIT SYSTEMD SERVICE
+# Create by Ansible
+# ============================================================================
+
+[Unit]
+Description=Fluent Bit - High performance log processor
+Documentation=https://docs.fluentbit.io/
+After=network.target
+{% if fluent_bit_inputs.docker | default(false) %}
+Requires=docker.service
+After=docker.service
+{% endif %}
+{% if fluent_bit_inputs.kubernetes | default(false) %}
+After=kubelet.service
+{% endif %}
+
+[Service]
+Type=simple
+User=root
+Group=root
+
+# Main process
+ExecStart=/opt/fluent-bit/bin/fluent-bit -c {{ fluent_bit_config_dir }}/fluent-bit.conf
+
+# Restart policy
+Restart=on-failure
+RestartSec=5s
+StartLimitInterval=60s
+StartLimitBurst=3
+
+# Resource limits
+LimitNOFILE=65536
+TasksMax=infinity
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths={{ fluent_bit_data_dir }} /var/log
+{% if fluent_bit_inputs.docker | default(false) %}
+ReadOnlyPaths={{ fluent_bit_docker_path }}
+SupplementaryGroups=docker
+{% endif %}
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fluent-bit
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,75 @@
+# ============================================================================
+# FLUENT BIT - CONFIGURATION PRINCIPALE
+# Générate from Ansible, DOT NOT CHANGE MANUALLY.
+# ============================================================================
+
+[SERVICE]
+    # Intervalle de flush (secondes)
+    Flush        {{ fluent_bit_flush_seconds }}
+    
+    # Mode daemon (Off car géré par systemd)
+    Daemon       Off
+    
+    # Niveau de log
+    Log_Level    {{ fluent_bit_log_level }}
+    
+    # Fichier de parsers
+    Parsers_File {{ fluent_bit_config_dir }}/parsers/parsers.conf
+    
+    # HTTP Server pour monitoring
+    HTTP_Server  {% if fluent_bit_http_server %}On{% else %}Off{% endif %}
+
+    HTTP_Listen  0.0.0.0
+    HTTP_Port    {{ fluent_bit_http_port }}
+    
+    # Storage backend
+    storage.path              {{ fluent_bit_storage_path }}
+    storage.sync              {{ fluent_bit_storage_sync }}
+    storage.checksum          {% if fluent_bit_storage_checksum %}on{% else %}off{% endif %}
+
+    storage.max_chunks_up     {{ fluent_bit_storage_max_chunks_up }}
+    storage.backlog.mem_limit {{ fluent_bit_mem_buf_limit }}
+
+# ============================================================================
+# INPUTS - SOURCES DE LOGS
+# ============================================================================
+
+{% if fluent_bit_inputs.docker | default(false) %}
+@INCLUDE {{ fluent_bit_config_dir }}/inputs/docker.conf
+{% endif %}
+
+{% if fluent_bit_inputs.kubernetes | default(false) %}
+@INCLUDE {{ fluent_bit_config_dir }}/inputs/kubernetes.conf
+{% endif %}
+
+{% if fluent_bit_inputs.systemd | default(false) %}
+@INCLUDE {{ fluent_bit_config_dir }}/inputs/systemd.conf
+{% endif %}
+
+{% if fluent_bit_inputs.apache | default(false) %}
+@INCLUDE {{ fluent_bit_config_dir }}/inputs/apache.conf
+{% endif %}
+
+{% if fluent_bit_inputs.nginx | default(false) %}
+@INCLUDE {{ fluent_bit_config_dir }}/inputs/nginx.conf
+{% endif %}
+
+{% if fluent_bit_inputs.custom_files | default(false) and fluent_bit_custom_files | length > 0 %}
+@INCLUDE {{ fluent_bit_config_dir }}/inputs/custom_files.conf
+{% endif %}
+
+# ============================================================================
+# FILTERS - TRAITEMENT DES LOGS
+# ============================================================================
+
+@INCLUDE {{ fluent_bit_config_dir }}/filters/filters.conf
+
+# ============================================================================
+# OUTPUTS - DESTINATIONS
+# ============================================================================
+
+{% if fluent_bit_output_type == 'opensearch' or fluent_bit_output_type == 'elasticsearch' %}
+@INCLUDE {{ fluent_bit_config_dir }}/outputs/opensearch.conf
+{% elif fluent_bit_output_type == 'loki' %}
+@INCLUDE {{ fluent_bit_config_dir }}/outputs/loki.conf
+{% endif %}

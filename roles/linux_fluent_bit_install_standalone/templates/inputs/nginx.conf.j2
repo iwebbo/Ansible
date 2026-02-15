@@ -1,0 +1,26 @@
+# ============================================================================
+# INPUT: NGINX LOGS
+# ============================================================================
+
+# Nginx Access Logs
+[INPUT]
+    Name              tail
+    Tag               nginx.access
+    Path              {{ fluent_bit_nginx_access_log }}
+    DB                {{ fluent_bit_data_dir }}/nginx_access.db
+    Mem_Buf_Limit     {{ fluent_bit_mem_buf_limit }}
+    Skip_Long_Lines   On
+    Refresh_Interval  5
+    Read_from_Head    False
+
+# Nginx Error Logs
+[INPUT]
+    Name              tail
+    Tag               nginx.error
+    Path              {{ fluent_bit_nginx_error_log }}
+    Parser            nginx_error
+    DB                {{ fluent_bit_data_dir }}/nginx_error.db
+    Mem_Buf_Limit     {{ fluent_bit_mem_buf_limit }}
+    Skip_Long_Lines   On
+    Refresh_Interval  5
+    Read_from_Head    False

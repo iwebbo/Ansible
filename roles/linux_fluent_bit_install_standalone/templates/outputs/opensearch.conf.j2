@@ -1,0 +1,61 @@
+# ============================================================================
+# OUTPUT: OPENSEARCH / ELASTICSEARCH
+# Generate from Ansible
+# ============================================================================
+
+[OUTPUT]
+    Name                  opensearch
+    Match                 *
+    Host                  {{ fluent_bit_opensearch_host }}
+    Port                  {{ fluent_bit_opensearch_port }}
+    Index                 {{ fluent_bit_opensearch_index }}
+    Type                  _doc
+    
+    # Authentification
+{% if fluent_bit_opensearch_user is defined and fluent_bit_opensearch_user != "" %}
+    HTTP_User             {{ fluent_bit_opensearch_user }}
+    HTTP_Passwd           {{ fluent_bit_opensearch_password }}
+{% endif %}
+    
+    # TLS/SSL
+{% if fluent_bit_opensearch_tls %}
+    tls                   On
+    tls.verify            {{ 'On' if fluent_bit_opensearch_tls_verify else 'Off' }}
+{% if fluent_bit_opensearch_tls_ca_file != "" %}
+    tls.ca_file           {{ fluent_bit_opensearch_tls_ca_file }}
+{% endif %}
+{% if fluent_bit_opensearch_tls_crt_file != "" %}
+    tls.crt_file          {{ fluent_bit_opensearch_tls_crt_file }}
+{% endif %}
+{% if fluent_bit_opensearch_tls_key_file != "" %}
+    tls.key_file          {{ fluent_bit_opensearch_tls_key_file }}
+{% endif %}
+{% else %}
+    tls                   Off
+{% endif %}
+    
+    # Format Logstash (index avec date)
+{% if fluent_bit_opensearch_logstash_format %}
+    Logstash_Format       On
+    Logstash_Prefix       {{ fluent_bit_opensearch_logstash_prefix }}
+    Logstash_DateFormat   {{ fluent_bit_opensearch_logstash_dateformat }}
+{% else %}
+    Logstash_Format       Off
+{% endif %}
+    
+    # Génération d'ID unique
+    Generate_ID           {{ 'On' if fluent_bit_opensearch_generate_id else 'Off' }}
+    
+    # Type suppression (OpenSearch 2.x+)
+    Suppress_Type_Name    On
+    
+    # Buffer et retry
+    Retry_Limit           {{ fluent_bit_retry_limit }}
+    Buffer_Size           {{ fluent_bit_opensearch_buffer_size }}
+    
+    # Traces (debug)
+    Trace_Output          {{ 'On' if fluent_bit_opensearch_trace_output else 'Off' }}
+    Trace_Error           {{ 'On' if fluent_bit_opensearch_trace_error else 'Off' }}
+    
+    # Timestamp field
+    Time_Key              @timestamp
