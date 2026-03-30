@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disk Space Report - {{ inventory_hostname }}</title>
+    <style>
+        :root {
+            --color-ok: #10b981;
+            --color-ok-bg: #d1fae5;
+            --color-warning: #f59e0b;
+            --color-warning-bg: #fef3c7;
+            --color-danger: #ef4444;
+            --color-danger-bg: #fee2e2;
+            --color-bg: #f8fafc;
+            --color-card: #ffffff;
+            --color-border: #e2e8f0;
+            --color-text: #1e293b;
+            --color-text-muted: #64748b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text);
+            padding: 2rem;
+            line-height: 1.6;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        header {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+        }
+
+        header h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+        header .subtitle { opacity: 0.8; font-size: 0.9rem; }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1.25rem;
+        }
+
+        .meta-item {
+            background: rgba(255,255,255,0.1);
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .meta-item .label { opacity: 0.7; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .meta-item .value { font-weight: 600; margin-top: 0.15rem; }
+
+        /* Summary Cards */
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-card {
+            background: var(--color-card);
+            border: 1px solid var(--color-border);
+            border-radius: 10px;
+            padding: 1.25rem;
+            text-align: center;
+            border-left: 4px solid;
+        }
+
+        .summary-card.ok { border-left-color: var(--color-ok); }
+        .summary-card.warning { border-left-color: var(--color-warning); }
+        .summary-card.danger { border-left-color: var(--color-danger); }
+        .summary-card.total { border-left-color: #6366f1; }
+
+        .summary-card .count { font-size: 2rem; font-weight: 800; }
+        .summary-card.ok .count { color: var(--color-ok); }
+        .summary-card.warning .count { color: var(--color-warning); }
+        .summary-card.danger .count { color: var(--color-danger); }
+        .summary-card.total .count { color: #6366f1; }
+        .summary-card .label { font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.25rem; }
+
+{% if _disk_status | selectattr('status', 'ne', 'ok') | list | length > 0 %}
+        /* Alert Banner */
+        .alert-banner {
+            background: var(--color-danger-bg);
+            border: 1px solid var(--color-danger);
+            border-radius: 10px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .alert-banner.warning-only {
+            background: var(--color-warning-bg);
+            border-color: var(--color-warning);
+        }
+
+        .alert-banner .icon { font-size: 1.5rem; flex-shrink: 0; }
+        .alert-banner h3 { font-size: 1rem; margin-bottom: 0.25rem; }
+        .alert-banner p { font-size: 0.85rem; color: var(--color-text-muted); }
+        .alert-banner ul { margin: 0.5rem 0 0 1.25rem; font-size: 0.85rem; }
+{% endif %}
+
+        /* Table */
+        .table-container {
+            background: var(--color-card);
+            border: 1px solid var(--color-border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .table-header h2 { font-size: 1.1rem; font-weight: 700; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f1f5f9;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--color-text-muted);
+            font-weight: 600;
+        }
+
+        td {
+            padding: 0.85rem 1rem;
+            border-top: 1px solid var(--color-border);
+            font-size: 0.875rem;
+        }
+
+        tr:hover { background: #f8fafc; }
+
+        /* Status badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.65rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge.ok { background: var(--color-ok-bg); color: #065f46; }
+        .badge.warning { background: var(--color-warning-bg); color: #92400e; }
+        .badge.danger { background: var(--color-danger-bg); color: #991b1b; }
+
+        .badge .dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .badge.ok .dot { background: var(--color-ok); }
+        .badge.warning .dot { background: var(--color-warning); }
+        .badge.danger .dot { background: var(--color-danger); }
+
+        /* Progress bar */
+        .progress-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            min-width: 80px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-fill.ok { background: var(--color-ok); }
+        .progress-fill.warning { background: var(--color-warning); }
+        .progress-fill.danger { background: var(--color-danger); }
+
+        .progress-text { font-size: 0.8rem; font-weight: 600; min-width: 3rem; text-align: right; }
+
+        .mount-path { font-family: 'SF Mono', SFMono-Regular, Consolas, monospace; font-size: 0.8rem; }
+        .fs-name { color: var(--color-text-muted); font-size: 0.8rem; }
+
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--color-border);
+            font-size: 0.8rem;
+            color: var(--color-text-muted);
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 1rem; }
+            .meta-grid { grid-template-columns: 1fr 1fr; }
+            .summary { grid-template-columns: 1fr 1fr; }
+            table { font-size: 0.8rem; }
+            td, th { padding: 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- Header -->
+        <header>
+            <h1>&#128421; Disk Space Report</h1>
+            <p class="subtitle">Automated filesystem analysis with threshold alerts</p>
+            <div class="meta-grid">
+                <div class="meta-item">
+                    <div class="label">Hostname</div>
+                    <div class="value">{{ inventory_hostname }}</div>
+                </div>
+                <div class="meta-item">
+                    <div class="label">OS</div>
+                    <div class="value">{{ ansible_distribution | default('N/A') }} {{ ansible_distribution_version | default('') }}</div>
+                </div>
+                <div class="meta-item">
+                    <div class="label">Kernel</div>
+                    <div class="value">{{ ansible_kernel | default('N/A') }}</div>
+                </div>
+                <div class="meta-item">
+                    <div class="label">Report Date</div>
+                    <div class="value">{{ ansible_date_time.iso8601 | default('N/A') }}</div>
+                </div>
+                <div class="meta-item">
+                    <div class="label">Warning Threshold</div>
+                    <div class="value">{{ disk_warning_threshold }}%</div>
+                </div>
+                <div class="meta-item">
+                    <div class="label">Danger Threshold</div>
+                    <div class="value">{{ disk_danger_threshold }}%</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Summary Cards -->
+        <div class="summary">
+            <div class="summary-card total">
+                <div class="count">{{ _disk_status | length }}</div>
+                <div class="label">Total Partitions</div>
+            </div>
+            <div class="summary-card ok">
+                <div class="count">{{ _disk_status | selectattr('status', 'equalto', 'ok') | list | length }}</div>
+                <div class="label">Healthy</div>
+            </div>
+            <div class="summary-card warning">
+                <div class="count">{{ _disk_status | selectattr('status', 'equalto', 'warning') | list | length }}</div>
+                <div class="label">Warning</div>
+            </div>
+            <div class="summary-card danger">
+                <div class="count">{{ _disk_status | selectattr('status', 'equalto', 'danger') | list | length }}</div>
+                <div class="label">Danger</div>
+            </div>
+        </div>
+
+{% set danger_list = _disk_status | selectattr('status', 'equalto', 'danger') | list %}
+{% set warning_list = _disk_status | selectattr('status', 'equalto', 'warning') | list %}
+
+{% if danger_list | length > 0 %}
+        <!-- Danger Alert -->
+        <div class="alert-banner">
+            <span class="icon">&#128308;</span>
+            <div>
+                <h3>Critical: Disk Space Nearly Full</h3>
+                <p>The following partitions exceed {{ disk_danger_threshold }}% usage and require immediate attention:</p>
+                <ul>
+{% for p in danger_list %}
+                    <li><strong>{{ p.mount }}</strong> &mdash; {{ p.use_percent }} used ({{ p.avail }} remaining)</li>
+{% endfor %}
+                </ul>
+            </div>
+        </div>
+{% endif %}
+
+{% if warning_list | length > 0 %}
+        <!-- Warning Alert -->
+        <div class="alert-banner warning-only">
+            <span class="icon">&#9888;&#65039;</span>
+            <div>
+                <h3>Warning: Disk Space Running Low</h3>
+                <p>The following partitions exceed {{ disk_warning_threshold }}% usage:</p>
+                <ul>
+{% for p in warning_list %}
+                    <li><strong>{{ p.mount }}</strong> &mdash; {{ p.use_percent }} used ({{ p.avail }} remaining)</li>
+{% endfor %}
+                </ul>
+            </div>
+        </div>
+{% endif %}
+
+        <!-- Partition Table -->
+        <div class="table-container">
+            <div class="table-header">
+                <h2>Filesystem Details</h2>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Mount Point</th>
+                        <th>Filesystem</th>
+                        <th>Size</th>
+                        <th>Used</th>
+                        <th>Available</th>
+                        <th>Usage</th>
+                    </tr>
+                </thead>
+                <tbody>
+{% for p in _disk_status | sort(attribute='use_int', reverse=true) %}
+                    <tr>
+                        <td>
+                            <span class="badge {{ p.status }}">
+                                <span class="dot"></span>
+                                {{ p.status | upper }}
+                            </span>
+                        </td>
+                        <td class="mount-path">{{ p.mount }}</td>
+                        <td class="fs-name">{{ p.filesystem }}</td>
+                        <td>{{ p.size }}</td>
+                        <td>{{ p.used }}</td>
+                        <td>{{ p.avail }}</td>
+                        <td>
+                            <div class="progress-wrap">
+                                <div class="progress-bar">
+                                    <div class="progress-fill {{ p.status }}" style="width: {{ p.use_int }}%"></div>
+                                </div>
+                                <span class="progress-text">{{ p.use_percent }}</span>
+                            </div>
+                        </td>
+                    </tr>
+{% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <footer>
+            Generated by <strong>Ansible Role: disk_space_report</strong> &mdash; {{ ansible_date_time.iso8601 | default('N/A') }}
+            | Thresholds: Warning &ge; {{ disk_warning_threshold }}% | Danger &ge; {{ disk_danger_threshold }}%
+        </footer>
+
+    </div>
+</body>
+</html>

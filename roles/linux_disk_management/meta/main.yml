@@ -1,0 +1,29 @@
+---
+galaxy_info:
+  author: "AECoding"
+  description: "Scan disk space on Linux/Unix hosts, detect warning/danger thresholds, and generate HTML reports"
+  company: "AECoding"
+  license: "MIT"
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+        - noble
+    - name: EL
+      versions:
+        - "8"
+        - "9"
+  galaxy_tags:
+    - disk
+    - monitoring
+    - report
+    - storage
+    - linux
+ 
+dependencies: []

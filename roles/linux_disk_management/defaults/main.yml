@@ -1,0 +1,22 @@
+---
+# Seuils d'alerte (en pourcentage d'utilisation)
+disk_warning_threshold: 80
+disk_danger_threshold: 90
+ 
+# Répertoire de sortie des rapports (côté controller/localhost)
+disk_report_dir: "{{ playbook_dir }}/../disk_reports"
+ 
+# Exclure certains types de filesystem
+disk_exclude_fstype:
+  - tmpfs
+  - devtmpfs
+  - squashfs
+  - overlay
+  - none
+ 
+# Exclure certains points de montage (regex)
+disk_exclude_mount_regex: "^/(snap|sys|proc|dev|run)"
+
+#Template var
+disk_report_file_html: "disk_report_{{ ansible_date_time.date }}.html"
+disk_report_file_txt: "disk_report_summary_{{ ansible_date_time.date }}.txt"

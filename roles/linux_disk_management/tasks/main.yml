@@ -1,0 +1,186 @@
+---
+# =============================================
+# disk_space_report - Main Tasks
+# =============================================
+
+# ── 1. Collect ────────────────────────────────
+
+- name: Gather disk facts
+  ansible.builtin.setup:
+    gather_subset:
+      - hardware
+      - date_time
+  tags:
+    - disk_scan
+    - always
+
+- name: Get disk usage via df
+  ansible.builtin.shell: |
+    df -Ph 2>/dev/null | tail -n +2 | awk '{
+      printf "{\"filesystem\":\"%s\",\"size\":\"%s\",\"used\":\"%s\",\"avail\":\"%s\",\"use_percent\":\"%s\",\"mount\":\"%s\"}\n", $1, $2, $3, $4, $5, $6
+    }'
+  register: df_output
+  changed_when: false
+  args:
+    executable: /bin/bash
+  tags:
+    - disk_scan
+
+# ── 2. Parse & Classify ──────────────────────
+
+- name: Parse disk usage data
+  ansible.builtin.set_fact:
+    disk_partitions: "{{ df_output.stdout_lines | map('from_json') | list }}"
+  tags:
+    - disk_scan
+
+- name: Filter excluded filesystems and mounts
+  ansible.builtin.set_fact:
+    disk_partitions_filtered: >-
+      {{
+        disk_partitions |
+        rejectattr('filesystem', 'in', disk_exclude_fstype) |
+        rejectattr('mount', 'match', disk_exclude_mount_regex) |
+        list
+      }}
+  tags:
+    - disk_scan
+
+- name: Classify each partition
+  ansible.builtin.set_fact:
+    _disk_status: >-
+      {{ (_disk_status | default([])) + [{
+        'filesystem': item.filesystem,
+        'size': item.size,
+        'used': item.used,
+        'avail': item.avail,
+        'use_percent': item.use_percent,
+        'mount': item.mount,
+        'use_int': item.use_percent | replace('%','') | int,
+        'status': (item.use_percent | replace('%','') | int >= disk_danger_threshold | int) | ternary('danger',
+                    (item.use_percent | replace('%','') | int >= disk_warning_threshold | int) | ternary('warning', 'ok'))
+      }] }}
+  loop: "{{ disk_partitions_filtered }}"
+  loop_control:
+    label: "{{ item.mount }} ({{ item.use_percent }})"
+  tags:
+    - disk_scan
+
+# ── 3. Console Alerts ────────────────────────
+
+- name: Count warnings and dangers
+  ansible.builtin.set_fact:
+    disk_warning_count: "{{ _disk_status | selectattr('status', 'equalto', 'warning') | list | length }}"
+    disk_danger_count: "{{ _disk_status | selectattr('status', 'equalto', 'danger') | list | length }}"
+    disk_ok_count: "{{ _disk_status | selectattr('status', 'equalto', 'ok') | list | length }}"
+  tags:
+    - disk_scan
+
+- name: Display disk status summary
+  ansible.builtin.debug:
+    msg: >-
+      [{{ item.status | upper }}] {{ item.mount }} -
+      {{ item.use_percent }} used ({{ item.used }}/{{ item.size }}) -
+      {{ item.avail }} free
+  loop: "{{ _disk_status }}"
+  loop_control:
+    label: "{{ item.mount }}"
+  tags:
+    - disk_scan
+    - disk_display
+
+- name: Alert - Partitions in WARNING state
+  ansible.builtin.debug:
+    msg: "⚠️  WARNING: {{ item.mount }} at {{ item.use_percent }} usage (threshold: {{ disk_warning_threshold }}%)"
+  loop: "{{ _disk_status | selectattr('status', 'equalto', 'warning') | list }}"
+  loop_control:
+    label: "{{ item.mount }}"
+  when: disk_warning_count | int > 0
+  tags:
+    - disk_alert
+
+- name: Alert - Partitions in DANGER state
+  ansible.builtin.debug:
+    msg: "🔴 DANGER: {{ item.mount }} at {{ item.use_percent }} usage (threshold: {{ disk_danger_threshold }}%)"
+  loop: "{{ _disk_status | selectattr('status', 'equalto', 'danger') | list }}"
+  loop_control:
+    label: "{{ item.mount }}"
+  when: disk_danger_count | int > 0
+  tags:
+    - disk_alert
+
+# ── 4. Generate Reports (delegate_to localhost) ─
+
+- name: Ensure report directory exists on controller
+  ansible.builtin.file:
+    path: "{{ disk_report_dir }}/{{ inventory_hostname }}"
+    state: directory
+    mode: "0755"
+  delegate_to: localhost
+  connection: local
+  become: no
+  tags:
+    - disk_report
+
+- name: Generate HTML disk report
+  ansible.builtin.template:
+    src: disk_report.html.j2
+    dest: "{{ disk_report_dir }}/{{ inventory_hostname }}/{{ disk_report_file_html }}"
+    mode: "0644"
+  delegate_to: localhost
+  connection: local
+  become: no
+  tags:
+    - disk_report
+
+- name: Generate summary text report
+  ansible.builtin.copy:
+    content: |
+      ========================================
+      DISK SPACE REPORT
+      ========================================
+      Host: {{ inventory_hostname }}
+      IP: {{ ansible_default_ipv4.address | default('N/A') }}
+      Generated: {{ ansible_date_time.iso8601 }}
+
+      === SYSTEM ===
+      OS: {{ ansible_distribution | default('N/A') }} {{ ansible_distribution_version | default('') }}
+      Kernel: {{ ansible_kernel | default('N/A') }}
+
+      === THRESHOLDS ===
+      Warning: >= {{ disk_warning_threshold }}%
+      Danger:  >= {{ disk_danger_threshold }}%
+
+      === SUMMARY ===
+      Total partitions: {{ _disk_status | length }}
+      OK:      {{ disk_ok_count }}
+      Warning: {{ disk_warning_count }}
+      Danger:  {{ disk_danger_count }}
+
+      === PARTITIONS ===
+      {% for p in _disk_status | sort(attribute='use_int', reverse=true) %}
+      [{{ p.status | upper }}] {{ p.mount }}
+        Filesystem: {{ p.filesystem }}
+        Size: {{ p.size }} | Used: {{ p.used }} | Free: {{ p.avail }} | Usage: {{ p.use_percent }}
+      {% endfor %}
+
+      Reports:
+      - HTML: {{ disk_report_dir }}/{{ inventory_hostname }}/{{ disk_report_file_html }}
+      - TXT:  {{ disk_report_dir }}/{{ inventory_hostname }}/{{ disk_report_file_txt }}
+      ========================================
+    dest: "{{ disk_report_dir }}/{{ inventory_hostname }}/{{ disk_report_file_txt }}"
+    mode: "0644"
+  delegate_to: localhost
+  connection: local
+  become: no
+  tags:
+    - disk_report
+
+- name: Display report location
+  ansible.builtin.debug:
+    msg:
+      - "Disk report generated for {{ inventory_hostname }}"
+      - "Location: {{ disk_report_dir }}/{{ inventory_hostname }}/"
+      - "Files: {{ disk_report_file_html }} | {{ disk_report_file_txt }}"
+  tags:
+    - disk_report
