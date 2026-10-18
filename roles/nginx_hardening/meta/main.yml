@@ -1,0 +1,41 @@
+---
+# meta/main.yml - Métadonnées du rôle nginx_hardening
+
+- name: Galaxy metadata
+  galaxy_info:
+    author: A&ECoding
+    description: "Ansible role to install and harden Nginx on Linux servers (Debian, RedHat)"
+    company: A&E Coding
+    license: MIT
+    min_ansible_version: "2.10"
+    platforms:
+      - debian:
+          versions:
+            - "bullseye"
+            - "bookworm"
+            - "trixie"
+      - ubuntu:
+          versions:
+            - "focal"
+            - "jammy"
+            - "noble"
+      - centos:
+          versions:
+            - "7"
+            - "8"
+      - rhel:
+          versions:
+            - "7"
+            - "8"
+    galaxy_tags:
+      - nginx
+      - webserver
+      - httpd
+      - security
+      - hardening
+      - ssl
+      - tls
+      - debian
+      - redhat
+      - centos
+      - ubuntu

@@ -1,0 +1,88 @@
+---
+# tasks/unix/main.yml - Tâches pour RedHat/RHEL
+
+- name: Update package lists
+  ansible.builtin.yum:
+    update_cache: yes
+  tags:
+    - nginx
+    - packages
+
+- name: Install Nginx
+  ansible.builtin.yum:
+    name:
+      - nginx
+      - nginx-mod-http-xslt
+    state: present
+    disable_gpg_check: false
+  register: nginx_install_result
+  tags:
+    - nginx
+    - install
+
+- name: Create nginx configuration directory
+  ansible.builtin.file:
+    path: "{{ nginx_config_dir }}"
+    state: directory
+    mode: '0755'
+  notify: reload nginx
+  tags:
+    - nginx
+    - config
+
+- name: Deploy Nginx configuration template
+  ansible.builtin.template:
+    src: templates/nginx.conf.j2
+    dest: "{{ nginx_config_dir }}/nginx.conf"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload nginx
+  tags:
+    - nginx
+    - config
+
+- name: Create SSL certificate directory
+  ansible.builtin.file:
+    path: "{{ nginx_ssl_dir }}"
+    state: directory
+    mode: '0755'
+  tags:
+    - nginx
+    - ssl
+
+- name: Generate self-signed SSL certificate
+  community.general.certbot:
+    cert_name: nginx
+    email: "{{ nginx_admin_email | default('admin@localhost') }}"
+    force_renewal: false
+    domain_names: "{{ nginx_ssl_domains | default(['localhost']) }}"
+    auth_method: stand-alone
+    manual_cert_path: "{{ nginx_ssl_dir }}/fullchain.pem"
+    manual_key_path: "{{ nginx_ssl_dir }}/privkey.pem"
+  when:
+    - nginx_enable_ssl | default(false) | bool
+  tags:
+    - nginx
+    - ssl
+    - certbot
+
+- name: Create systemd service file
+  ansible.builtin.template:
+    src: templates/nginx.service.j2
+    dest: /etc/systemd/system/nginx.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload nginx
+  tags:
+    - nginx
+    - systemd
+
+- name: Reload nginx configuration
+  ansible.builtin.systemd:
+    daemon_reload: yes
+  notify: restart nginx
+  tags:
+    - nginx
+    - systemd

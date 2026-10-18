@@ -1,0 +1,11 @@
+---
+# handlers/main.yml - Handlers du rôle nginx_hardening
+
+- name: reload nginx
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: restart nginx
+  ansible.builtin.systemd:
+    service: nginx
+    state: restarted

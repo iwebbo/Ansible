@@ -1,0 +1,21 @@
+[Unit]
+Description=Nginx HTTP and HTTPS server
+Documentation=https://www.nginx.com/resources/wiki/start/
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+User={{ nginx_user | default('nginx') }}
+Group={{ nginx_group | default('nginx') }}
+PIDFile=/var/run/nginx.pid
+ExecStartPre=/usr/sbin/nginx -t
+ExecStart=/usr/sbin/nginx -c {{ nginx_config_file | default('/etc/nginx/nginx.conf') }}
+ExecReload=/bin/kill -s HUP $MAIN_PID_FILE
+Restart=on-failure
+RestartSec=5s
+LimitNOFILE={{ nginx_max_open_files | default(65535) }}
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
