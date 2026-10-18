@@ -1,0 +1,34 @@
+---
+# handlers/main.yml - Certificate deployment handlers
+
+- name: Reload nginx
+  ansible.builtin.service:
+    name: nginx
+    state: restarted
+  when: ansible_os_family == 'Debian'
+
+- name: Restart Apache
+  ansible.builtin.service:
+    name: apache2
+    state: restarted
+  when: ansible_os_family == 'Debian'
+
+- name: Reload systemd nginx
+  ansible.builtin.systemd:
+    daemon_reload: yes
+    enabled: true
+    state: started
+    enabled: true
+  when: ansible_os_family == 'RedHat'
+
+- name: Restart Apache (CentOS/RHEL)
+  ansible.builtin.service:
+    name: httpd
+    state: restarted
+  when: ansible_os_family == 'RedHat'
+
+- name: Restart IIS
+  ansible.windows.win_service:
+    name: World Wide Web Publishing Service
+    state: started
+    ensure_running: true

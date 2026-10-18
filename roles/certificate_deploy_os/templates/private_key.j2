@@ -1,0 +1,6 @@
+---
+# templates/private_key.j2 - Private Key Template
+
+-----BEGIN PRIVATE KEY-----
+{{ key_content | b64encode }}
+-----END PRIVATE KEY-----

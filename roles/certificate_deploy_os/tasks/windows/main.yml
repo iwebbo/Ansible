@@ -1,0 +1,34 @@
+---
+# tasks/windows/main.yml - Windows certificate deployment
+
+- name: Create certificates directory if not exists
+  ansible.windows.win_file:
+    path: "{{ cert_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Deploy public certificate (Windows format)
+  ansible.windows.win_copy:
+    src: "{{ templates_dir }}/certificate.j2"
+    dest: "{{ cert_file }}"
+    owner: SYSTEM
+    group: BUILTIN\Administrators
+    mode: '0644'
+  notify: restart iis
+  when: cert_file is defined and cert_file != ''
+
+- name: Deploy private key (Windows format)
+  ansible.windows.win_copy:
+    src: "{{ templates_dir }}/private_key.j2"
+    dest: "{{ key_file }}"
+    owner: SYSTEM
+    group: BUILTIN\Administrators
+    mode: '0600'
+  notify: restart iis
+  when: key_file is defined and key_file != ''
+
+- name: Verify certificate file exists (Windows)
+  ansible.windows.win_stat:
+    path: "{{ cert_file }}"
+  register: cert_stat
+  when: cert_file is defined and cert_file != ''

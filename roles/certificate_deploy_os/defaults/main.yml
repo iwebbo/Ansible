@@ -1,0 +1,25 @@
+---
+# defaults/main.yml - Certificate Deploy OS Role Defaults
+
+# Directory paths
+cert_dir: /etc/ssl/certs
+key_dir: /etc/ssl/private
+
+# Certificate file variables (can be overridden per host)
+cert_file: ''
+key_file: ''
+
+# Server identification
+server_name: localhost
+common_name: '{{ server_name }}'
+
+# Key generation parameters
+key_size: 2048
+key_type: RSA
+
+# File permissions
+file_permissions_cert: '0644'
+file_permissions_key: '0600'
+
+# Template directory
+templates_dir: templates

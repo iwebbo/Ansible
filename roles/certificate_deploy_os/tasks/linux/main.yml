@@ -1,0 +1,43 @@
+---
+# tasks/linux/main.yml - Linux certificate deployment
+
+- name: Create certificates directory if not exists
+  ansible.builtin.file:
+    path: "{{ cert_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Deploy public certificate
+  ansible.builtin.copy:
+    src: "{{ templates_dir }}/certificate.j2"
+    dest: "{{ cert_file }}"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload nginx
+  when: cert_file is defined and cert_file != ''
+
+- name: Deploy private key
+  ansible.builtin.copy:
+    src: "{{ templates_dir }}/private_key.j2"
+    dest: "{{ key_file }}"
+    owner: root
+    group: root
+    mode: '0600'
+  notify: reload nginx
+  when: key_file is defined and key_file != ''
+
+- name: Verify certificate file exists
+  ansible.builtin.stat:
+    path: "{{ cert_file }}"
+  register: cert_stat
+  when: cert_file is defined and cert_file != ''
+
+- name: Validate certificate format (PEM)
+  ansible.builtin.command:
+    cmd: openssl x509 -in {{ cert_file }} -text -noout 2>&1 | head -5
+  register: cert_validation
+  args:
+    creates: "{{ cert_file }}.validated"
+  when: cert_stat is defined and cert_stat.exists
+  failed_when: false

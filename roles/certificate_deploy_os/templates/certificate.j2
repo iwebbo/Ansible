@@ -1,0 +1,6 @@
+---
+# templates/certificate.j2 - Public Certificate Template
+
+-----BEGIN CERTIFICATE-----
+{{ cert_content | b64encode }}
+-----END CERTIFICATE-----
