@@ -1,0 +1,39 @@
+---
+# tasks file for iis2_deploy - Debian/Ubuntu specific
+
+- name: Update package lists (Debian/Ubuntu)
+  ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  tags:
+    - prerequisites
+    - packages
+
+- name: Install Apache2 and required modules (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name:
+      - apache2
+      - "{{ iis2_apache_modules | map('selectattr('name', 'in', iis2_apache_modules))' | list }" + "/default"
+    state: present
+    update_cache: yes
+  tags:
+    - install
+    - apache
+
+- name: Ensure Apache user and group exist (Debian/Ubuntu)
+  ansible.builtin.user:
+    name: "{{ iis2_apache_user }}"
+    groups: "{{ iis2_apache_group }}"
+    state: present
+    shell: /bin/bash
+  tags:
+    - apache
+    - user
+
+- name: Ensure Apache group exists (Debian/Ubuntu)
+  ansible.builtin.group:
+    name: "{{ iis2_apache_group }}"
+    state: present
+  tags:
+    - apache
+    - group

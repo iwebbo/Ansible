@@ -1,0 +1,47 @@
+---
+# meta main file for iis2_deploy
+# Métadonnées du rôle Ansible Galaxy
+
+ galaxy_info:
+   name: iis2_deploy
+   version: "1.0.0"
+   author: A&ECoding
+   description: Rôle Ansible pour installer et gérer Apache2 sur Debian/RedHat
+     serveurs Linux.
+   license: MIT
+   min_ansible_version: "2.9"
+   platforms:
+     - debian
+       versions:
+         - "bullseye"
+         - "bookworm"
+         - "trixie"
+     - ubuntu
+       versions:
+         - "focal"
+         - "jammy"
+         - "noble"
+     - centos
+       versions:
+         - "8"
+         - "stream9"
+     - rhel
+       versions:
+         - "8"
+         - "9"
+     - fedora
+       versions:
+         - "38"
+         - "39"
+         - "40"
+   galaxy_tags:
+     - apache
+     - webserver
+     - httpd
+     - linux
+     - debian
+     - ubuntu
+     - centos
+     - redhat
+     - installation
+     - configuration

@@ -1,0 +1,23 @@
+---
+# tasks file for iis2_deploy
+# Entry point with OS detection and routing
+
+- name: Gather facts if not already done
+  ansible.builtin.setup:
+    gather_subset:
+      - 'min'
+
+- name: Detect OS families using native variables
+  ansible.builtin.set_fact:
+    is_debian_ubuntu: "{{ ansible_os_family == 'Debian' }}"
+    is_rhel_fam: "{{ ansible_os_family == 'RedHat' }}"
+
+- name: Route to Debian/Ubuntu tasks
+  ansible.builtin.include_tasks:
+    file: tasks/linux/main.yml
+  when: is_debian_ubuntu
+
+- name: Route to RHEL tasks
+  ansible.builtin.include_tasks:
+    file: tasks/unix/main.yml
+  when: is_rhel_fam

@@ -1,0 +1,60 @@
+---
+# defaults file for iis2_deploy
+# Variables par défaut avec commentaires explicatifs
+
+# Nom du site web Apache (valeur par défaut)
+iis2_apache_site_name: "Apache Default Site"
+
+# Port d'écoute du serveur Apache
+iis2_apache_port: 80
+
+# Chemin racine du document root
+iis2_apache_docroot: "/var/www/html"
+
+# Nom de l'utilisateur Apache (Debian/Ubuntu)
+iis2_apache_user: apache
+
+# Nom du groupe Apache (Debian/Ubuntu)
+iis2_apache_group: apache
+
+# Chemin vers le fichier de configuration principal
+iis2_apache_config_path: "/etc/apache2/apache2.conf"
+
+# Liste des modules à installer (Debian/Ubuntu)
+iis2_apache_modules:
+  - mpm_prefork
+  - ssl
+  - rewrite
+  - headers
+  - env1
+  - env2
+  - expires
+  - unixd
+
+# Liste des modules à installer (RHEL/CentOS/Fedora)
+iis2_apache_rhel_modules:
+  - httpd
+  - mod_ssl
+  - mod_rewrite
+  - mod_headers
+  - mod_env
+  - mod_expires
+  - mod_unixd
+
+# Habilitation du module SSL par défaut
+iis2_enable_ssl: false
+
+# Habilitation de l'authentification par base de données
+iis2_enable_db_auth: false
+
+# Habilitation de la protection des fichiers cachés
+iis2_enable_hidden_files_protection: true
+
+# Habilitation de la protection des dossiers vides
+iis2_enable_empty_dir_protection: true
+
+# Habilitation du suivi d'activité (access logging)
+iis2_enable_access_log: true
+
+# Habilitation du suivi d'erreurs (error logging)
+iis2_enable_error_log: true

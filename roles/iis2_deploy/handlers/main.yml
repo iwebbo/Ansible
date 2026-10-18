@@ -1,0 +1,20 @@
+---
+# handlers file for iis2_deploy
+
+- name: Restart Apache service (Debian/Ubuntu)
+  ansible.builtin.service:
+    name: apache2
+    state: restarted
+  notify: restart apache2
+  tags:
+    - apache
+    - restart
+
+- name: Restart Apache service (RHEL/CentOS/Fedora)
+  ansible.builtin.service:
+    name: httpd
+    state: restarted
+  notify: restart httpd
+  tags:
+    - apache
+    - restart
