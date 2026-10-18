@@ -1,0 +1,28 @@
+---
+# defaults/main.yml - Variables par défaut sonarqube_install_server
+
+# === SonarQube Configuration ===
+
+sonarqube_image: "sonarqube"
+sonarqube_version: "9.8.0"
+sonarqube_port: 9000
+sonarqube_host: "{{ ansible_default_ipv4.address }}"
+sonarqube_admin_user: "admin"
+sonarqube_admin_password: "SonarQubeAdmin123!"
+sonarqube_db_type: "h2"
+sonarqube_db_url: "jdbc:h2:mem:sonarqube-db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE"
+
+# === Directories ===
+
+sonarqube_data_dir: "/var/lib/sonarqube"
+sonarqube_config_dir: "/etc/sonarqube"
+sonarqube_compose_file: "{{ ansible_user_home }}/docker-compose.yml"
+
+# === Docker Configuration ===
+
+sonarqube_docker_network: "sonarqube-network"
+sonarqube_docker_volume_driver: "local"
+
+# === Timeout Settings ===
+
+sonarqube_ready_timeout: 300

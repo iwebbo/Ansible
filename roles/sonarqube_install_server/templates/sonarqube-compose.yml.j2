@@ -1,0 +1,27 @@
+---
+# templates/sonarqube-compose.yml.j2 - Configuration Docker Compose SonarQube
+
+version: '3.8'
+
+services:
+  sonarqube:
+    image: "{{ sonarqube_image }}:{{ sonarqube_version }}"
+    container_name: "{{ sonarqube_container_name }}"
+    restart: unless-stopped
+    ports:
+      - "{{ sonarqube_port }}:9000"
+    environment:
+      SONARQUBE_JDBC_URL: "{{ sonarqube_db_url }}"
+      SONARQUBE_JMX_PORT: 9111
+      SONARQUBE_JMX_ENABLED: true
+      SONARQUBE_ADMIN_USER: "{{ sonarqube_admin_user }}"
+      SONARQUBE_ADMIN_PASSWORD: "{{ sonarqube_admin_password }}"
+    volumes:
+      - "{{ sonarqube_data_dir }}:/var/lib/sonarqube"
+      - "{{ sonarqube_config_dir }}:/etc/sonarqube"
+    networks:
+      - {{ sonarqube_docker_network }}
+
+networks:
+  {{ sonarqube_docker_network }}:
+    driver: {{ sonarqube_docker_volume_driver }}

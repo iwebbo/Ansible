@@ -1,0 +1,18 @@
+---
+# handlers/main.yml - Handlers pour sonarqube_install_server
+
+- name: restart docker
+  ansible.builtin.service:
+    name: docker
+    state: restarted
+  tags:
+    - docker
+    - handler
+
+- name: restart sonarqube
+  ansible.builtin.command:
+    cmd: "docker compose -f {{ sonarqube_compose_file }} up -d --remove-orphans"
+    creates: "/var/run/docker.sock"
+  tags:
+    - sonarqube
+    - handler

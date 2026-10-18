@@ -1,0 +1,86 @@
+---
+# tasks/linux/main.yml - Tâches spécifiques Debian/Ubuntu
+
+- name: Install Docker Engine prerequisites
+  ansible.builtin.apt:
+    update_cache: yes
+    name:
+      - "docker.io"
+      - "docker-compose-plugin"
+    state: present
+    allow_unauthenticated: true
+  tags:
+    - docker
+    - install
+
+- name: Install Docker Engine package
+  ansible.builtin.apt:
+    name: docker-ce, docker-ce-cli, containerd.io, docker-compose-plugin
+    update_cache: yes
+    state: present
+    allow_unauthenticated: true
+  tags:
+    - docker
+    - install
+
+- name: Start Docker service on Debian/Ubuntu
+  ansible.builtin.service:
+    name: docker
+    enabled: yes
+    state: started
+  notify: restart docker
+  tags:
+    - docker
+    - start
+
+- name: Create sonarqube data directory
+  ansible.builtin.file:
+    path: "{{ sonarqube_data_dir }}"
+    state: directory
+    owner: "sonarqube"
+    group: "sonarqube"
+    mode: "0750"
+  tags:
+    - sonarqube
+    - setup
+
+- name: Create sonarqube config directory
+  ansible.builtin.file:
+    path: "{{ sonarqube_config_dir }}"
+    state: directory
+    owner: "sonarqube"
+    group: "sonarqube"
+    mode: "0750"
+  tags:
+    - sonarqube
+    - setup
+
+- name: Deploy SonarQube Docker Compose configuration
+  ansible.builtin.template:
+    src: templates/sonarqube-compose.yml.j2
+    dest: "{{ sonarqube_compose_file }}"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart docker
+  tags:
+    - sonarqube
+    - deploy
+
+- name: Start SonarQube container
+  ansible.builtin.command:
+    cmd: "docker compose -f {{ sonarqube_compose_file }} up -d"
+    creates: "/var/run/docker.sock"
+  notify: restart docker
+  tags:
+    - sonarqube
+    - start
+
+- name: Wait for SonarQube to be ready
+  ansible.builtin.wait_for:
+    port: "{{ sonarqube_port }}"
+    timeout: "{{ sonarqube_ready_timeout }}"
+    state: started
+  tags:
+    - sonarqube
+    - wait
